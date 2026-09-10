@@ -1,9 +1,9 @@
 /**
- * Modelo de mercado reutilizable
+ * Modelo operativo de mercado (semana + panel gerencial).
+ * Estudio completo con fuentes oficiales / ESTIMADO: src/lib/estudio-mercado.ts
  * - Hoy = rebanada semanal (ejecución Mercadeo)
- * - Dirección = torta completa + panel gerencial (Lucía)
+ * - Dirección = KPIs + torta + link al estudio
  * Palabras planas: programa, cohorte, sede, financiador, interesado.
- * Cifras marcadas EJEMPLO.
  */
 
 export type Audiencia = "financiador" | "estudiante";
@@ -173,52 +173,68 @@ export const PORTFOLIO_GERENCIA = {
   nota: "Cifras EJEMPLO · cohorte 2027-1 · Facultad de Educación",
 } as const;
 
-/** Torta completa Colombia — Dirección */
+/**
+ * Torta alineada al SAM del estudio (ESTIMADO).
+ * Fuente canónica: estudio-mercado.ts — no inventar % sin etiqueta.
+ */
 export const TORTA_MERCADO = {
-  titulo: "Universo estimado · maestrías Educación Colombia",
-  nota: "Cifras EJEMPLO · plantilla reutilizable para otras maestrías",
+  titulo: "SAM estimado · maestrías Educación Colombia",
+  nota: "ESTIMADO · ver /estudio para DANE/SNIES y plan 12 semanas",
   programa: "Facultad de Educación · Unisabana",
   cohorte: "2027-1",
   segmentos: [
     {
       id: "docentes",
-      label: "Docentes / interesados potenciales",
-      n: 85_000,
+      label: "Docentes SAM (Educación / Pedagogía / DI)",
+      n: 48_000,
+      rol: "estudiante" as const,
+    },
+    {
+      id: "directivos",
+      label: "Directivos / coordinadores",
+      n: 9_500,
       rol: "estudiante" as const,
     },
     {
       id: "colegios",
-      label: "Colegios (posibles financiadores)",
-      n: 12_400,
+      label: "Colegios financiadores (cupos)",
+      n: 3_200,
       rol: "financiador" as const,
     },
     {
       id: "secretarias",
-      label: "Secretarías / alcaldías / gobernaciones",
-      n: 1_180,
+      label: "Secretarías / alcaldías con cupos",
+      n: 280,
       rol: "financiador" as const,
     },
   ],
   abordados: [
     {
-      segmento: "Docentes / interesados",
-      universo: 85_000,
+      segmento: "Docentes / interesados SAM",
+      universo: 48_000,
       tocados: 420,
-      pct: 0.5,
+      pct: 0.9,
       semana: "Semana 8–14 sep · +48",
     },
     {
-      segmento: "Colegios",
-      universo: 12_400,
+      segmento: "Directivos SAM",
+      universo: 9_500,
       tocados: 86,
-      pct: 0.7,
+      pct: 0.9,
+      semana: "Semana 8–14 sep · +12",
+    },
+    {
+      segmento: "Colegios financiadores",
+      universo: 3_200,
+      tocados: 86,
+      pct: 2.7,
       semana: "Semana 8–14 sep · +12",
     },
     {
       segmento: "Secretarías / alcaldías",
-      universo: 1_180,
+      universo: 280,
       tocados: 9,
-      pct: 0.8,
+      pct: 3.2,
       semana: "Semana 8–14 sep · +2 (Huila)",
     },
   ],

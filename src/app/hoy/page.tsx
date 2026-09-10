@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import { listActividad, listTareas } from "@/lib/db";
+import { getMetasCohorte, listActividad, listTareas, totalesMetas } from "@/lib/db";
 import { AppShell } from "@/components/AppShell";
 import { HoyClient } from "@/components/HoyClient";
 
@@ -11,7 +11,12 @@ export default async function HoyPage() {
   const session = await getSessionUser();
   if (!session) redirect("/");
 
-  const [tareas, feed] = await Promise.all([listTareas(), listActividad()]);
+  const [tareas, feed, metas] = await Promise.all([
+    listTareas(),
+    listActividad(),
+    getMetasCohorte(),
+  ]);
+  const metasTotales = totalesMetas(metas);
 
   return (
     <AppShell
@@ -25,6 +30,8 @@ export default async function HoyPage() {
           initialTareas={tareas}
           initialFeed={feed}
           showConnections={session.rol === "mercadeo"}
+          metas={metas}
+          metasTotales={metasTotales}
         />
       </Suspense>
     </AppShell>

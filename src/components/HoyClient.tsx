@@ -11,6 +11,9 @@ import {
   audienciaDeTarea,
   equilibrioMetido,
 } from "@/lib/market-story";
+import { VisionGlobalCard } from "./VisionGlobalCard";
+import { MetasCohortePanel } from "./MetasCohortePanel";
+import type { MetasCohorte } from "@/lib/types";
 import { Modal } from "./Modal";
 import { toast } from "./Toast";
 import Link from "next/link";
@@ -30,10 +33,18 @@ export function HoyClient({
   initialTareas,
   initialFeed,
   showConnections = true,
+  metas,
+  metasTotales,
 }: {
   initialTareas: TareaHoy[];
   initialFeed: ActividadItem[];
   showConnections?: boolean;
+  metas: MetasCohorte;
+  metasTotales: {
+    metaInscritosTotal: number;
+    metaIngresosCop: number;
+    puntoEquilibrioCupos: number;
+  };
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -451,7 +462,16 @@ export function HoyClient({
         </div>
       </div>
 
-      {/* Hero: Semana de mercado */}
+      <VisionGlobalCard variant="hoy" />
+
+      <MetasCohortePanel
+        initialMetas={metas}
+        initialTotales={metasTotales}
+        canEdit={false}
+        variant="compact"
+      />
+
+      {/* Hero: Semana de mercado — la rebanada */}
       <section className="mb-4 rounded-[12px] border border-navy/20 bg-navy px-4 py-4 text-white shadow-sm">
         <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
           {SEMANA_MERCADO.etiqueta}
@@ -683,8 +703,12 @@ export function HoyClient({
       </div>
 
       <p className="mt-5 text-sm text-navy/70">
+        <Link href="/estudio" className="underline">
+          Estudio de mercadeo →
+        </Link>
+        {" · "}
         <Link href="/direccion" className="underline">
-          Ver historia completa (Dirección) →
+          Dirección →
         </Link>
         {" · "}
         <Link href="/agentes" className="underline">

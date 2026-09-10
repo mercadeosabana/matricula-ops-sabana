@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import { getMetricas } from "@/lib/db";
+import { getMetasCohorte, getMetricas, totalesMetas } from "@/lib/db";
 import { FUNNEL_EJEMPLO } from "@/lib/seed-data";
 import { AppShell } from "@/components/AppShell";
 import { DireccionClient } from "@/components/DireccionClient";
@@ -12,10 +12,16 @@ export default async function DireccionPage() {
   if (!session) redirect("/");
 
   const metrica = await getMetricas();
+  const metas = await getMetasCohorte();
+  const metasTotales = totalesMetas(metas);
+  const canEditMetas = session.rol === "direccion";
 
   return (
     <AppShell rol={session.rol} userName={session.displayName} rolLabel={session.rolLabel}>
       <DireccionClient
+        metas={metas}
+        metasTotales={metasTotales}
+        canEditMetas={canEditMetas}
         metrica={metrica as Record<string, unknown> | null}
         funnel={FUNNEL_EJEMPLO}
         revenue={{

@@ -13,6 +13,10 @@ import {
   formatMillones,
   paceDePrograma,
 } from "@/lib/market-story";
+import { VisionGlobalCard } from "./VisionGlobalCard";
+import { MetasCohortePanel } from "./MetasCohortePanel";
+import type { MetasCohorte } from "@/lib/types";
+import { MapaMercadoColombia } from "./MapaMercadoColombia";
 import {
   AgendaConnectModal,
   OutlookConnectModal,
@@ -21,6 +25,13 @@ import {
 } from "./ConnectModals";
 
 type Props = {
+  metas: MetasCohorte;
+  metasTotales: {
+    metaInscritosTotal: number;
+    metaIngresosCop: number;
+    puntoEquilibrioCupos: number;
+  };
+  canEditMetas: boolean;
   metrica: Record<string, unknown> | null;
   funnel: { etapa: string; valor: number; conv: string | null }[];
   revenue: {
@@ -44,6 +55,9 @@ type Props = {
 };
 
 export function DireccionClient({
+  metas,
+  metasTotales,
+  canEditMetas,
   metrica,
   funnel,
   revenue,
@@ -89,8 +103,11 @@ export function DireccionClient({
         <div>
           <h1 className="m-0 text-2xl font-bold">Dirección · panorama</h1>
           <p className="mt-1 text-sm text-navy/65">
-            Cohorte {pf.nota.includes("2027-1") ? "2027-1" : ""} · números{" "}
-            <strong>EJEMPLO</strong> · escaneo en 5 segundos
+            Cohorte {pf.nota.includes("2027-1") ? "2027-1" : ""} · KPIs ligados al{" "}
+            <Link href="/estudio" className="underline font-semibold">
+              Estudio de mercadeo
+            </Link>{" "}
+            · cifras ESTIMADO donde no hay fuente oficial
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -108,6 +125,12 @@ export function DireccionClient({
             Semana mercado · {SEMANA_MERCADO.sedeFoco}
           </span>
           <Link
+            href="/estudio"
+            className="rounded-full border border-gold/40 bg-[#f8f1de] px-3 py-1 text-xs font-bold text-warn"
+          >
+            Estudio mercado →
+          </Link>
+          <Link
             href="/equipo"
             className="rounded-full border border-navy/20 bg-cream-card px-3 py-1 text-xs font-medium underline"
           >
@@ -116,7 +139,15 @@ export function DireccionClient({
         </div>
       </div>
 
-      {/* Hero portfolio numbers */}
+      <VisionGlobalCard variant="direccion" />
+
+      <MetasCohortePanel
+        initialMetas={metas}
+        initialTotales={metasTotales}
+        canEdit={canEditMetas}
+      />
+
+      {/* Hero portfolio numbers — leídos contra el estudio */}
       <section className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <BigStat
           label="Inscritos / meta"
@@ -255,8 +286,13 @@ export function DireccionClient({
           Historia de mercado
         </div>
         <h2 className="m-0 mt-1 text-xl font-bold">{TORTA_MERCADO.titulo}</h2>
-        <p className="m-0 mt-1 text-sm text-white/75">{TORTA_MERCADO.nota}</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <p className="m-0 mt-1 text-sm text-white/75">
+          {TORTA_MERCADO.nota} · detalle y fuentes en{" "}
+          <Link href="/estudio" className="underline text-gold">
+            /estudio
+          </Link>
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {TORTA_MERCADO.segmentos.map((s) => (
             <div key={s.id} className="rounded-lg bg-white/10 px-3 py-3">
               <div className="text-[10px] uppercase tracking-wide text-white/55">
@@ -326,6 +362,25 @@ export function DireccionClient({
           </ul>
         </section>
       </div>
+
+      <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="m-0 text-base font-semibold">
+              Mapa comercial · prioridad del elefante
+            </h2>
+            <p className="mt-1 text-xs text-navy/55">
+              Mismo módulo del estudio · click región/ciudad
+            </p>
+          </div>
+          <Link href="/estudio" className="text-xs underline text-navy/60">
+            Estudio completo →
+          </Link>
+        </div>
+        <div className="mt-3">
+          <MapaMercadoColombia compact initialZonaId="cundinamarca-bog" />
+        </div>
+      </section>
 
       {/* Dual funnels */}
       <div className="mb-4 grid gap-4 lg:grid-cols-2">
@@ -414,7 +469,11 @@ export function DireccionClient({
 
       <div className="mb-4 rounded-[10px] border border-border bg-[#eef2f8] px-4 py-3 text-sm leading-relaxed">
         <strong>Tu rol:</strong> mirar equilibrio vs interesados, avance por
-        programa y $ vs presupuesto. La ejecución semanal vive en{" "}
+        programa y $ vs presupuesto contra el{" "}
+        <Link href="/estudio" className="underline font-semibold">
+          Estudio de mercadeo
+        </Link>
+        . La ejecución semanal vive en{" "}
         <Link href="/hoy" className="underline">
           Hoy
         </Link>
@@ -592,8 +651,12 @@ export function DireccionClient({
           ))}
         </ol>
         <p className="mt-4 text-sm">
+          <Link href="/estudio" className="underline">
+            Estudio de mercadeo
+          </Link>
+          {" · "}
           <Link href="/hoy" className="underline">
-            Abrir Hoy (semana de mercado)
+            Hoy (semana)
           </Link>
           {" · "}
           <Link href="/equipo" className="underline">

@@ -178,3 +178,25 @@ export const ESTADO_LABEL: Record<string, string> = {
   agendada: "Desayuno agendado",
   descartada: "Descartada",
 };
+
+
+/** Metas de cohorte — las define Dirección; Mercadeo solo lectura */
+export interface MetaPrograma {
+  programa: string;
+  /** Meta de inscritos del programa (obligatoria) */
+  metaInscritos: number;
+  /** Meta de ingresos COP del programa (opcional) */
+  metaIngresosCop: number | null;
+  /** Cupos de equilibrio del programa (opcional) */
+  cuposEquilibrio: number | null;
+}
+
+export interface MetasCohorte {
+  cohorte: string;
+  /** Siempre las 4 maestrías */
+  programas: MetaPrograma[];
+  fechaCierreCohorte: string; // YYYY-MM-DD
+  updatedAt: string | null;
+  updatedByName: string | null;
+  updatedByUserId: string | null;
+}

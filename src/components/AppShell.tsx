@@ -102,6 +102,9 @@ export function AppShell({
               <NavLink href="/hoy" active={pathname === "/hoy"}>
                 Hoy
               </NavLink>
+              <NavLink href="/estudio" active={pathname === "/estudio"}>
+                Estudio mercado
+              </NavLink>
               <NavLink href="/crm" active={pathname === "/crm"}>
                 CRM
               </NavLink>
@@ -138,6 +141,9 @@ export function AppShell({
             <>
               <NavLink href="/direccion" active={pathname === "/direccion"}>
                 Dashboard
+              </NavLink>
+              <NavLink href="/estudio" active={pathname === "/estudio"}>
+                Estudio mercado
               </NavLink>
               <NavLink href="/equipo" active={pathname === "/equipo"}>
                 Equipo
@@ -176,6 +182,9 @@ export function AppShell({
               <MobileTab href="/hoy" active={pathname === "/hoy"}>
                 Hoy
               </MobileTab>
+              <MobileTab href="/estudio" active={pathname === "/estudio"}>
+                Estudio
+              </MobileTab>
               <MobileTab href="/crm" active={pathname === "/crm"}>
                 CRM
               </MobileTab>
@@ -190,6 +199,9 @@ export function AppShell({
             <>
               <MobileTab href="/direccion" active={pathname === "/direccion"}>
                 Dashboard
+              </MobileTab>
+              <MobileTab href="/estudio" active={pathname === "/estudio"}>
+                Estudio
               </MobileTab>
               <MobileTab href="/sala-guerra" active={pathname === "/sala-guerra"}>
                 Guerra

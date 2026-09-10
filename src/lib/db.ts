@@ -17,6 +17,7 @@ import type {
   Colegio,
   Envio,
   Lead,
+  MetasCohorte,
   MetricaDiaria,
   TareaHoy,
   User,
@@ -36,7 +37,118 @@ type Store = {
   actividad: ActividadItem[];
   metricas: MetricaDiaria[];
   agendaEvents: AgendaEvent[];
+  metasCohorte: MetasCohorte;
 };
+
+export const PROGRAMAS_META_CANONICOS = [
+  "Maestría en Educación",
+  "Maestría en Pedagogía",
+  "Maestría en Dirección y Gestión",
+  "Maestría en Desarrollo Infantil",
+] as const;
+
+function normalizeProgramaMeta(raw: Partial<MetasCohorte["programas"][number]> & { programa?: string }): MetasCohorte["programas"][number] {
+  const ingresos =
+    raw.metaIngresosCop === null || raw.metaIngresosCop === undefined
+      ? null
+      : Math.max(0, Math.round(Number(raw.metaIngresosCop) || 0));
+  const cupos =
+    raw.cuposEquilibrio === null || raw.cuposEquilibrio === undefined
+      ? null
+      : Math.max(0, Math.round(Number(raw.cuposEquilibrio) || 0));
+  return {
+    programa: String(raw.programa || "").trim(),
+    metaInscritos: Math.max(0, Math.round(Number(raw.metaInscritos) || 0)),
+    metaIngresosCop: ingresos,
+    cuposEquilibrio: cupos,
+  };
+}
+
+/** Asegura las 4 maestrías en orden canónico (merge por nombre flexible). */
+export function ensureCuatroProgramas(
+  programas: MetasCohorte["programas"] | undefined | null
+): MetasCohorte["programas"] {
+  const defaults: Record<string, MetasCohorte["programas"][number]> = {
+    "Maestría en Educación": {
+      programa: "Maestría en Educación",
+      metaInscritos: 12,
+      metaIngresosCop: 330_000_000,
+      cuposEquilibrio: 5,
+    },
+    "Maestría en Pedagogía": {
+      programa: "Maestría en Pedagogía",
+      metaInscritos: 10,
+      metaIngresosCop: 275_000_000,
+      cuposEquilibrio: 5,
+    },
+    "Maestría en Dirección y Gestión": {
+      programa: "Maestría en Dirección y Gestión",
+      metaInscritos: 10,
+      metaIngresosCop: 275_000_000,
+      cuposEquilibrio: 5,
+    },
+    "Maestría en Desarrollo Infantil": {
+      programa: "Maestría en Desarrollo Infantil",
+      metaInscritos: 8,
+      metaIngresosCop: 220_000_000,
+      cuposEquilibrio: 5,
+    },
+  };
+
+  const byKey = new Map<string, MetasCohorte["programas"][number]>();
+  for (const pr of programas || []) {
+    const n = normalizeProgramaMeta(pr);
+    const key = n.programa.toLowerCase();
+    byKey.set(key, n);
+    // aliases from older seeds
+    if (key.includes("pedagog")) byKey.set("maestría en pedagogía", n);
+    if (key.includes("dirección") || key.includes("direccion") || key.includes("gestión") || key.includes("gestion"))
+      byKey.set("maestría en dirección y gestión", { ...n, programa: "Maestría en Dirección y Gestión" });
+    if (key.includes("desarrollo infantil") || key === "di")
+      byKey.set("maestría en desarrollo infantil", { ...n, programa: "Maestría en Desarrollo Infantil" });
+    if (key.includes("educación") || key.includes("educacion"))
+      byKey.set("maestría en educación", { ...n, programa: "Maestría en Educación" });
+  }
+
+  return PROGRAMAS_META_CANONICOS.map((nombre) => {
+    const found = byKey.get(nombre.toLowerCase());
+    if (found) {
+      return {
+        ...defaults[nombre],
+        ...normalizeProgramaMeta({ ...found, programa: nombre }),
+        programa: nombre,
+      };
+    }
+    return defaults[nombre];
+  });
+}
+
+export function defaultMetasCohorte(): MetasCohorte {
+  return {
+    cohorte: "2027-1",
+    programas: ensureCuatroProgramas(null),
+    fechaCierreCohorte: "2026-10-26",
+    updatedAt: null,
+    updatedByName: null,
+    updatedByUserId: null,
+  };
+}
+
+export function totalesMetas(metas: MetasCohorte) {
+  const metaInscritosTotal = metas.programas.reduce(
+    (s, p) => s + (p.metaInscritos || 0),
+    0
+  );
+  const metaIngresosCop = metas.programas.reduce(
+    (s, p) => s + (p.metaIngresosCop || 0),
+    0
+  );
+  const puntoEquilibrioCupos = metas.programas.reduce(
+    (s, p) => s + (p.cuposEquilibrio || 0),
+    0
+  );
+  return { metaInscritosTotal, metaIngresosCop, puntoEquilibrioCupos };
+}
 
 let cache: Store | null = null;
 
@@ -201,6 +313,7 @@ function seedStore(): Store {
       },
     ],
     agendaEvents: [],
+    metasCohorte: defaultMetasCohorte(),
   };
 }
 
@@ -290,6 +403,24 @@ function loadStore(): Store {
         }
         if (!Array.isArray(parsed.agendaEvents)) {
           parsed.agendaEvents = [];
+        }
+        if (
+          !parsed.metasCohorte ||
+          !Array.isArray(parsed.metasCohorte.programas)
+        ) {
+          parsed.metasCohorte = defaultMetasCohorte();
+        } else {
+          const d = defaultMetasCohorte();
+          parsed.metasCohorte = {
+            cohorte: parsed.metasCohorte.cohorte || d.cohorte,
+            programas: ensureCuatroProgramas(parsed.metasCohorte.programas),
+            fechaCierreCohorte:
+              parsed.metasCohorte.fechaCierreCohorte ||
+              d.fechaCierreCohorte,
+            updatedAt: parsed.metasCohorte.updatedAt ?? null,
+            updatedByName: parsed.metasCohorte.updatedByName ?? null,
+            updatedByUserId: parsed.metasCohorte.updatedByUserId ?? null,
+          };
         }
         cache = parsed;
         persist(cache);
@@ -662,4 +793,56 @@ export async function reassignPendingOwnership(opts: {
     fromName: from.displayName || from.nombre,
     toName: to.displayName || to.nombre,
   };
+}
+
+
+export async function getMetasCohorte(): Promise<MetasCohorte> {
+  const store = loadStore();
+  if (!store.metasCohorte) {
+    store.metasCohorte = defaultMetasCohorte();
+    saveStore(store);
+  } else {
+    const fixed = {
+      ...store.metasCohorte,
+      programas: ensureCuatroProgramas(store.metasCohorte.programas),
+    };
+    store.metasCohorte = fixed;
+  }
+  return {
+    ...store.metasCohorte,
+    programas: store.metasCohorte.programas.map((p) => ({ ...p })),
+  };
+}
+
+export async function updateMetasCohorte(
+  patch: {
+    programas?: {
+      programa: string;
+      metaInscritos: number;
+      metaIngresosCop?: number | null;
+      cuposEquilibrio?: number | null;
+    }[];
+    fechaCierreCohorte?: string;
+    cohorte?: string;
+  },
+  actor: { id: string; displayName: string }
+): Promise<MetasCohorte> {
+  const store = loadStore();
+  const current = store.metasCohorte || defaultMetasCohorte();
+  const next: MetasCohorte = {
+    cohorte: patch.cohorte?.trim() || current.cohorte,
+    programas: ensureCuatroProgramas(
+      patch.programas
+        ? patch.programas.map((pr) => normalizeProgramaMeta(pr))
+        : current.programas
+    ),
+    fechaCierreCohorte:
+      patch.fechaCierreCohorte?.trim() || current.fechaCierreCohorte,
+    updatedAt: new Date().toISOString(),
+    updatedByName: actor.displayName,
+    updatedByUserId: actor.id,
+  };
+  store.metasCohorte = next;
+  saveStore(store);
+  return next;
 }
