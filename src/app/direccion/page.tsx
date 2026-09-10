@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import { getMetasCohorte, getMetricas, totalesMetas } from "@/lib/db";
+import { getMetasCohorte, getMetricas, listLeads, totalesMetas } from "@/lib/db";
 import { FUNNEL_EJEMPLO } from "@/lib/seed-data";
 import { AppShell } from "@/components/AppShell";
 import { DireccionClient } from "@/components/DireccionClient";
@@ -15,10 +15,12 @@ export default async function DireccionPage() {
   const metas = await getMetasCohorte();
   const metasTotales = totalesMetas(metas);
   const canEditMetas = session.rol === "direccion";
+  const leads = await listLeads();
 
   return (
     <AppShell rol={session.rol} userName={session.displayName} rolLabel={session.rolLabel}>
       <DireccionClient
+        leads={leads}
         metas={metas}
         metasTotales={metasTotales}
         canEditMetas={canEditMetas}

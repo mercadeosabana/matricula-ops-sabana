@@ -19,11 +19,13 @@ import {
 } from "@/lib/estudio-mercado";
 import { MapaMercadoColombia } from "./MapaMercadoColombia";
 import { MetasCohortePanel } from "./MetasCohortePanel";
-import type { MetasCohorte } from "@/lib/types";
+import { OrigenAttributionPanel } from "./OrigenAttributionPanel";
+import type { Lead, MetasCohorte } from "@/lib/types";
 
 export function EstudioClient({
   metas,
   metasTotales,
+  leads,
 }: {
   metas: MetasCohorte;
   metasTotales: {
@@ -31,6 +33,7 @@ export function EstudioClient({
     metaIngresosCop: number;
     puntoEquilibrioCupos: number;
   };
+  leads: Lead[];
 }) {
   const g = pctAbordadoGlobal();
   const tortaTotal = SAM_ESTIMADO.segmentos.reduce((s, x) => s + x.n, 0);
@@ -85,6 +88,8 @@ export function EstudioClient({
         initialTotales={metasTotales}
         canEdit={false}
       />
+
+      <OrigenAttributionPanel leads={leads} compact />
 
       {/* 1. Hechos oficiales */}
       <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">

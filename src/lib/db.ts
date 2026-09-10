@@ -22,6 +22,7 @@ import type {
   TareaHoy,
   User,
 } from "./types";
+import { normalizeOrigen } from "./origen";
 
 const DATA_DIR = process.env.VERCEL
   ? path.join("/tmp", "matricula-ops-data")
@@ -161,12 +162,14 @@ function mapLeadFromSeed(l: (typeof LEADS)[number]): Lead {
   const extended = l as typeof l & {
     owner?: string;
     nextTouch?: string | null;
+    origen?: string;
     canalOrigen?: string;
     opened?: boolean;
     visitado?: boolean;
     postVisita?: Lead["postVisita"];
   };
   const pv = extended.postVisita;
+  const canalOrigen = extended.canalOrigen || "email";
   return {
     id: l.id,
     colegioId: l.colegioId,
@@ -180,7 +183,8 @@ function mapLeadFromSeed(l: (typeof LEADS)[number]): Lead {
     createdAt: l.createdAt,
     owner: extended.owner || "Laura Natalia",
     nextTouch: extended.nextTouch ?? null,
-    canalOrigen: extended.canalOrigen || "email",
+    origen: normalizeOrigen(extended.origen, canalOrigen),
+    canalOrigen,
     opened: Boolean(extended.opened),
     visitado: Boolean(extended.visitado),
     postVisita: pv
@@ -213,6 +217,10 @@ function normalizeLead(raw: Partial<Lead> & { id: string }): Lead {
     createdAt: raw.createdAt || new Date().toISOString(),
     owner: raw.owner || "Laura Natalia",
     nextTouch: raw.nextTouch ?? null,
+    origen: normalizeOrigen(
+      (raw as Lead).origen,
+      raw.canalOrigen || "email"
+    ),
     canalOrigen: raw.canalOrigen || "email",
     opened: Boolean(raw.opened),
     visitado: Boolean(raw.visitado),
@@ -386,7 +394,10 @@ function loadStore(): Store {
         if (
           !Array.isArray(parsed.leads) ||
           parsed.leads.length < LEADS.length ||
-          parsed.leads.some((l) => l.owner === undefined)
+          parsed.leads.some((l) => l.owner === undefined) ||
+          parsed.leads.some(
+            (l) => !(l as Lead & { origen?: string }).origen
+          )
         ) {
           parsed.colegios = COLEGIOS.map((c) => ({
             id: c.id,

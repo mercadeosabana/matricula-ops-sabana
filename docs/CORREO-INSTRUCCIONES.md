@@ -71,6 +71,7 @@ Panel **gerencial** ligado al estudio:
 - Portfolio: tiempo, dinero, CAC / visita / matrícula (ESTIMADO).
 - Cupos vs equilibrio (Neiva).
 - Visión global + mapa + embudos · detalle en `/estudio`.
+- **De dónde vienen** — conteo por origen, mini-embudo y spend/CAC pauta (**EJEMPLO**, sin Ads API); CRM exige `origen`.
 
 ## Quién es quién
 
@@ -94,11 +95,11 @@ Los agentes **proponen** craft e insights. **Nadie envía solo** — siempre hay
 
 | Página | Para quién | Qué ver |
 |--------|------------|---------|
-| `/estudio` | Ambas | Estudio de mercadeo · torta · mapa · 12 semanas · competencia |
+| `/estudio` | Ambas | Estudio de mercadeo · torta · mapa · resumen **De dónde vienen** · competencia |
 | `/hoy` | Mercadeo | Visión global + semana · financiadores / interesados |
-| `/direccion` | Dirección | KPIs + visión global + mapa + embudos (liga a /estudio) |
+| `/direccion` | Dirección | KPIs + **De dónde vienen** (origen/embudo/spend EJEMPLO) + mapa + embudos |
 | `/equipo` | Dirección (Lucía, Ivan) | Usuarios, invitaciones, desactivar, pasar pendientes |
-| `/crm` | Ambas | Colegios + leads · data de la org |
+| `/crm` | Ambas | Colegios + leads · origen de adquisición (filtro/badge/editable) |
 | `/post-visita` | Mercadeo | Checklist docs / pago / beca |
 | `/sala-guerra` | Ambas | Brief semanal |
 | `/biblioteca` | Ambas | Ofertas one-pager |

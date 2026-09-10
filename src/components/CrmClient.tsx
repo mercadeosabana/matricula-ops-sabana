@@ -3,9 +3,18 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Colegio, Lead } from "@/lib/types";
-import { CANAL_LABEL } from "@/lib/types";
+import {
+  ORIGENES,
+  ORIGEN_BADGE_CLASS,
+  ORIGEN_LABEL,
+  isOrigen,
+  labelOrigen,
+  normalizeOrigen,
+  type Origen,
+} from "@/lib/origen";
 import { scoreLead, SCORE_LABEL, type ScoreLabel } from "@/lib/scoring";
 import { ScoreBadge } from "./ScoreBadge";
+import { toast } from "./Toast";
 
 const ETAPAS = [
   "contacto",
@@ -19,14 +28,17 @@ const ETAPAS = [
 
 export function CrmClient({
   colegios,
-  leads,
+  leads: initialLeads,
 }: {
   colegios: Colegio[];
   leads: Lead[];
 }) {
+  const [leads, setLeads] = useState(initialLeads);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<"todos" | ScoreLabel>("todos");
   const [etapa, setEtapa] = useState<string>("todas");
+  const [origenFiltro, setOrigenFiltro] = useState<string>("todos");
+  const [saving, setSaving] = useState(false);
 
   const byId = useMemo(
     () => new Map(colegios.map((c) => [c.id, c])),
@@ -39,18 +51,46 @@ export function CrmClient({
         lead: l,
         colegio: byId.get(l.colegioId),
         score: scoreLead(l),
+        origen: normalizeOrigen(l.origen, l.canalOrigen),
       }))
       .filter((r) => (filtro === "todos" ? true : r.score === filtro))
       .filter((r) =>
         etapa === "todas" ? true : r.lead.etapaFunnel === etapa
       )
+      .filter((r) =>
+        origenFiltro === "todos" ? true : r.origen === origenFiltro
+      )
       .sort((a, b) => {
         const order = { caliente: 0, tibio: 1, frio: 2 };
         return order[a.score] - order[b.score];
       });
-  }, [leads, byId, filtro, etapa]);
+  }, [leads, byId, filtro, etapa, origenFiltro]);
 
   const selected = rows.find((r) => r.lead.id === selectedId) || null;
+
+  async function saveOrigen(leadId: string, origen: Origen) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/crm/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origen }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(data.error || "No se pudo guardar el origen", "err");
+        return;
+      }
+      setLeads((prev) =>
+        prev.map((l) => (l.id === leadId ? { ...l, origen } : l))
+      );
+      toast(`Origen → ${ORIGEN_LABEL[origen]}`, "ok");
+    } catch {
+      toast("Error de red al guardar origen", "err");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -58,8 +98,8 @@ export function CrmClient({
         <div>
           <h1 className="m-0 text-2xl font-bold">CRM · Colegios y leads</h1>
           <p className="mt-1 text-sm text-navy/65">
-            Embudo · owner Laura Natalia · score caliente/tibio/frío · demo sin
-            Azure
+            Embudo · origen de adquisición · score caliente/tibio/frío · demo
+            sin Azure
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
@@ -99,6 +139,19 @@ export function CrmClient({
             </option>
           ))}
         </select>
+        <select
+          className="min-h-9 rounded-lg border border-border bg-white px-2 text-xs"
+          value={origenFiltro}
+          onChange={(e) => setOrigenFiltro(e.target.value)}
+          aria-label="Filtrar por origen"
+        >
+          <option value="todos">Todos los orígenes</option>
+          {ORIGENES.map((o) => (
+            <option key={o} value={o}>
+              {ORIGEN_LABEL[o]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
@@ -115,7 +168,7 @@ export function CrmClient({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ lead, colegio, score }) => (
+              {rows.map(({ lead, colegio, score, origen }) => (
                 <tr
                   key={lead.id}
                   className={`cursor-pointer border-b border-border/70 hover:bg-cream ${
@@ -138,7 +191,7 @@ export function CrmClient({
                     {lead.nextTouch || "—"}
                   </td>
                   <td className="px-3 py-2.5 text-xs">
-                    {CANAL_LABEL[lead.canalOrigen] || lead.canalOrigen}
+                    <OrigenBadge origen={origen} />
                   </td>
                 </tr>
               ))}
@@ -158,6 +211,7 @@ export function CrmClient({
                   {selected.lead.nombre}
                 </h2>
                 <ScoreBadge score={selected.score} />
+                <OrigenBadge origen={selected.origen} />
               </div>
               <p className="m-0 text-sm text-navy/65">
                 {selected.colegio?.nombre} · {selected.colegio?.ciudadZona}
@@ -171,13 +225,28 @@ export function CrmClient({
                 />
                 <Row k="Owner" v={selected.lead.owner} />
                 <Row k="Próximo toque" v={selected.lead.nextTouch || "—"} />
-                <Row
-                  k="Canal origen"
-                  v={
-                    CANAL_LABEL[selected.lead.canalOrigen] ||
-                    selected.lead.canalOrigen
-                  }
-                />
+                <div className="flex gap-2 border-b border-border/50 pb-1.5">
+                  <dt className="w-28 shrink-0 text-xs font-semibold uppercase tracking-wide text-navy/45">
+                    Origen
+                  </dt>
+                  <dd className="m-0 flex-1">
+                    <select
+                      className="w-full min-h-9 rounded-lg border border-border bg-white px-2 text-xs"
+                      value={selected.origen}
+                      disabled={saving}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (isOrigen(v)) void saveOrigen(selected.lead.id, v);
+                      }}
+                    >
+                      {ORIGENES.map((o) => (
+                        <option key={o} value={o}>
+                          {ORIGEN_LABEL[o]}
+                        </option>
+                      ))}
+                    </select>
+                  </dd>
+                </div>
                 <Row
                   k="Email"
                   v={selected.lead.email || "—"}
@@ -210,6 +279,17 @@ export function CrmClient({
         </aside>
       </div>
     </>
+  );
+}
+
+function OrigenBadge({ origen }: { origen: Origen }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${ORIGEN_BADGE_CLASS[origen]}`}
+      title={`Origen: ${labelOrigen(origen)}`}
+    >
+      {ORIGEN_LABEL[origen]}
+    </span>
   );
 }
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import { getMetasCohorte, totalesMetas } from "@/lib/db";
+import { getMetasCohorte, listLeads, totalesMetas } from "@/lib/db";
 import { AppShell } from "@/components/AppShell";
 import { EstudioClient } from "@/components/EstudioClient";
 
@@ -12,6 +12,7 @@ export default async function EstudioPage() {
 
   const metas = await getMetasCohorte();
   const metasTotales = totalesMetas(metas);
+  const leads = await listLeads();
 
   return (
     <AppShell
@@ -19,7 +20,7 @@ export default async function EstudioPage() {
       userName={session.displayName}
       rolLabel={session.rolLabel}
     >
-      <EstudioClient metas={metas} metasTotales={metasTotales} />
+      <EstudioClient metas={metas} metasTotales={metasTotales} leads={leads} />
     </AppShell>
   );
 }

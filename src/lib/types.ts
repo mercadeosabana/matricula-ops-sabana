@@ -86,6 +86,9 @@ export interface Lead {
   createdAt: string;
   owner: string;
   nextTouch: string | null;
+  /** Adquisición: de dónde vino el lead */
+  origen: string;
+  /** Canal de contacto preferido / legado (se mapea a origen si falta) */
   canalOrigen: string;
   opened: boolean;
   visitado: boolean;

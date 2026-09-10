@@ -15,7 +15,8 @@ import {
 } from "@/lib/market-story";
 import { VisionGlobalCard } from "./VisionGlobalCard";
 import { MetasCohortePanel } from "./MetasCohortePanel";
-import type { MetasCohorte } from "@/lib/types";
+import { OrigenAttributionPanel } from "./OrigenAttributionPanel";
+import type { Lead, MetasCohorte } from "@/lib/types";
 import { MapaMercadoColombia } from "./MapaMercadoColombia";
 import {
   AgendaConnectModal,
@@ -25,6 +26,7 @@ import {
 } from "./ConnectModals";
 
 type Props = {
+  leads: Lead[];
   metas: MetasCohorte;
   metasTotales: {
     metaInscritosTotal: number;
@@ -55,6 +57,7 @@ type Props = {
 };
 
 export function DireccionClient({
+  leads,
   metas,
   metasTotales,
   canEditMetas,
@@ -146,6 +149,8 @@ export function DireccionClient({
         initialTotales={metasTotales}
         canEdit={canEditMetas}
       />
+
+      <OrigenAttributionPanel leads={leads} />
 
       {/* Hero portfolio numbers — leídos contra el estudio */}
       <section className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
