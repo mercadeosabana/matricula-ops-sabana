@@ -41,7 +41,11 @@ export function AppShell({
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 bg-navy px-4 py-3 text-white">
-        <Link href={isMercadeo ? "/hoy" : "/direccion"} className="flex items-center gap-3">
+        <Link
+          href={isMercadeo ? "/hoy" : "/direccion"}
+          className="flex items-center gap-3 text-white"
+          style={{ color: "#fff" }}
+        >
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gold font-bold text-navy">
             M
           </div>
@@ -77,7 +81,8 @@ export function AppShell({
           {!isMercadeo && (
             <Link
               href="/actividad"
-              className="min-h-11 inline-flex items-center rounded-lg border border-white/30 px-3 text-sm hover:bg-white/10"
+              className="min-h-11 inline-flex items-center rounded-lg border border-white/30 px-3 text-sm text-white hover:bg-white/10"
+              style={{ color: "#fff" }}
             >
               Log de actividad
             </Link>
@@ -270,6 +275,7 @@ function NavLink({
           ? "bg-navy text-white"
           : "text-navy/80 hover:bg-cream"
       }`}
+      style={{ color: active ? "#fff" : "#1a2b4a" }}
     >
       {children}
     </Link>
@@ -291,6 +297,7 @@ function MobileTab({
       className={`min-h-11 flex-1 rounded-lg px-2 py-2 text-center text-sm font-medium ${
         active ? "bg-navy text-white" : "text-navy/70"
       }`}
+      style={{ color: active ? "#fff" : "#1a2b4a" }}
     >
       {children}
     </Link>
