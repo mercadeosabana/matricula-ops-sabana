@@ -10,7 +10,11 @@ Los agentes proponen craft (email / WhatsApp / guion / visita). Mercadeo aprueba
 - Next.js 15 (App Router) + TypeScript + Tailwind CSS v4
 - Persistencia JSON store (`data/store.json` local; `/tmp` en Vercel)
 - Auth demo por persona: Laura Natalia (Mercadeo) / Laura Lucía (Dirección)
+- 5 agentes (Captación, Admisiones, Inteligencia, Orquestadora, Región) + chat en `/agentes`
+- Canales demo: Outlook, WA, LinkedIn borradores, Llamada IA piloto, Visita, Región/Convenios
+- Modo DEMO (`?demo=1`) para simular envíos sin Azure/Meta
 - Conexiones reales: Outlook OAuth (Azure) + WhatsApp Cloud API; ver `docs/SETUP-OAUTH.md`
+- Borrador correo Ivan→Laura Lucía: `docs/CORREO-INSTRUCCIONES.md`
 
 ## Requisitos
 
@@ -46,6 +50,7 @@ npm start
 | `/hoy` | Mercadeo (+ lectura Dirección) | Cola del día, Aprobar/Editar/Enviar/Agendar, feed agentes, mini funnel |
 | `/direccion` | Dirección | KPIs, funnel, revenue EJEMPLO, WoW, estrategia 30d, mix programas |
 | `/actividad` | ambos | Audit log agentes + humanos |
+| `/agentes` | ambos | Roster 5 agentes + chat |
 
 ## API (mínima)
 
@@ -56,6 +61,8 @@ npm start
 - `GET /api/actividad?kind=all\|agente\|human`
 - `GET /api/metricas`
 - `POST /api/reset` — reinicia seed demo
+- `POST /api/agentes/chat` `{ agentId, message, history? }`
+- `POST /api/demo/simular-llamada` / `confirmar-visita`
 
 ## Datos seed
 

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { ActividadItem, TareaHoy } from "@/lib/types";
 import { CANAL_LABEL, ESTADO_LABEL } from "@/lib/types";
 import { highlightConfirm, hasUnresolvedConfirm } from "@/lib/utils";
+import { readDemoClient, setDemoCookie } from "@/lib/demo";
 import { Modal } from "./Modal";
 import { toast } from "./Toast";
 import Link from "next/link";
@@ -14,6 +15,7 @@ import {
   WhatsAppConnectModal,
   useConnections,
 } from "./ConnectModals";
+import { CanalesPanel } from "./CanalesPanel";
 
 const FUNNEL = [
   { n: 420, l: "Contactos" },
@@ -44,7 +46,21 @@ export function HoyClient({
   const [busy, setBusy] = useState(false);
   const [outlookOpen, setOutlookOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
   const { status, refresh: refreshConnections } = useConnections();
+
+  useEffect(() => {
+    const q = searchParams.get("demo");
+    if (q === "1") {
+      setDemoCookie(true);
+      setDemoMode(true);
+    } else if (q === "0") {
+      setDemoCookie(false);
+      setDemoMode(false);
+    } else {
+      setDemoMode(readDemoClient());
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const outlook = searchParams.get("outlook");
@@ -60,7 +76,7 @@ export function HoyClient({
       toast(msg, "err");
       setOutlookOpen(true);
     }
-    router.replace("/hoy");
+    router.replace(demoMode ? "/hoy?demo=1" : "/hoy");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,6 +91,22 @@ export function HoyClient({
   const editTask = editId ? tareas.find((t) => t.id === editId) : null;
   const sendTask = sendId ? tareas.find((t) => t.id === sendId) : null;
 
+  const needsDemoOffer = useMemo(() => {
+    if (!sendTask) return false;
+    if (status?.forceMockSend || demoMode) return false;
+    if (
+      (sendTask.canal === "email" ||
+        sendTask.canal === "email_wa" ||
+        sendTask.canal === "region") &&
+      !status?.outlook.connected
+    )
+      return true;
+    if (sendTask.canal === "whatsapp" && !status?.whatsapp.connected)
+      return true;
+    if (sendTask.canal === "telefono") return true;
+    return false;
+  }, [sendTask, status, demoMode]);
+
   async function refresh() {
     const [tRes, aRes] = await Promise.all([
       fetch("/api/tareas").then((r) => r.json()),
@@ -85,7 +117,11 @@ export function HoyClient({
     router.refresh();
   }
 
-  async function act(id: string, action: string, extra?: Record<string, string>) {
+  async function act(
+    id: string,
+    action: string,
+    extra?: Record<string, string | boolean>
+  ) {
     setBusy(true);
     try {
       const res = await fetch(`/api/tareas/${id}`, {
@@ -132,41 +168,65 @@ export function HoyClient({
 
   function openSend(t: TareaHoy) {
     const check = `${t.asunto}\n${t.cuerpo}`;
-    if (hasUnresolvedConfirm(check)) {
+    if (hasUnresolvedConfirm(check) && t.canal !== "linkedin") {
+      // still allow opening for demo sim with warning for linkedin-less sendables
+      if (!demoMode && !status?.forceMockSend) {
+        toast(
+          "Hay [CONFIRMAR] sin resolver. Edita la tarea antes de enviar.",
+          "warn"
+        );
+        return;
+      }
       toast(
-        "Hay [CONFIRMAR] sin resolver. Edita la tarea antes de enviar.",
+        "Hay [CONFIRMAR] — en DEMO puedes simular; en real, edita antes.",
         "warn"
       );
+    }
+    if (t.canal === "linkedin") {
+      toast("LinkedIn: solo borradores — úsalos desde Canales o Agentes", "warn");
       return;
     }
     if (
       showConnections &&
       !status?.forceMockSend &&
-      (t.canal === "email" || t.canal === "email_wa") &&
+      !demoMode &&
+      (t.canal === "email" || t.canal === "email_wa" || t.canal === "region") &&
       !status?.outlook.connected
     ) {
-      toast("Conecta Outlook primero", "warn");
-      setOutlookOpen(true);
+      // Offer demo path via send modal instead of blocking hard
+      setSendId(t.id);
       return;
     }
     if (
       showConnections &&
       !status?.forceMockSend &&
+      !demoMode &&
       t.canal === "whatsapp" &&
       !status?.whatsapp.connected
     ) {
-      toast("Conecta WhatsApp primero", "warn");
-      setWaOpen(true);
+      setSendId(t.id);
       return;
     }
     setSendId(t.id);
   }
 
-  async function confirmSend() {
+  async function confirmSend(asDemo = false) {
     if (!sendId) return;
-    const data = await act(sendId, "enviar");
+    const useDemo = asDemo || demoMode || Boolean(status?.forceMockSend);
+    // For real send path, still block unresolved confirm
+    if (!useDemo && sendTask) {
+      const check = `${sendTask.asunto}\n${sendTask.cuerpo}`;
+      if (hasUnresolvedConfirm(check)) {
+        toast("Resuelve [CONFIRMAR] antes del envío real", "warn");
+        return;
+      }
+    }
+    // Demo send bypasses confirm check on server only if we strip or use demo flag
+    // Server still checks CONFIRMAR — for demo, temporarily allow by editing? 
+    // Better: pass demo and have server skip confirm when demo=true
+    const data = await act(sendId, "enviar", useDemo ? { demo: true } : {});
     if (data) {
-      toast(data.message || "Envío registrado", "ok");
+      toast(data.message || "Envío registrado", useDemo ? "warn" : "ok");
       setSendId(null);
       await refresh();
     }
@@ -188,22 +248,61 @@ export function HoyClient({
     setBusy(false);
   }
 
-  function sendHint(canal: string) {
-    if (canal === "telefono") {
-      return "No hay carrier: se marca la llamada como lista / usada.";
+  function toggleDemo() {
+    const next = !demoMode;
+    setDemoCookie(next);
+    setDemoMode(next);
+    toast(next ? "Modo DEMO activado" : "Modo DEMO desactivado", "ok");
+    router.replace(next ? "/hoy?demo=1" : "/hoy");
+  }
+
+  async function onSimularLlamada(resultado: string) {
+    const res = await fetch("/api/demo/simular-llamada", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resultado }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast(data.error || "Error", "err");
+      return;
     }
-    if (status?.forceMockSend) {
-      return "FORCE_MOCK_SEND=1 · se registrará como mock sin llamar a Graph/Meta.";
+    toast(data.message || `Simulado: ${resultado}`, "warn");
+    await refresh();
+  }
+
+  async function onConfirmarVisita(slot: string) {
+    const res = await fetch("/api/demo/confirmar-visita", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slot }),
+    });
+    const data = await res.json();
+    toast(data.message || "Cupo marcado", "ok");
+    await refresh();
+  }
+
+  function sendHint(canal: string) {
+    if (demoMode || status?.forceMockSend) {
+      return "DEMO · se registrará como simulación (no llama a Graph/Meta/carrier).";
+    }
+    if (canal === "telefono") {
+      return "Piloto Llamada IA: usa Simular envío (demo) o el panel Canales.";
+    }
+    if (canal === "region") {
+      return status?.outlook.connected
+        ? "Carta Región vía Outlook (o simular en DEMO)."
+        : "Sin Outlook: usa «Simular envío (demo)».";
     }
     if (canal === "email" || canal === "email_wa") {
       return status?.outlook.connected
-        ? "Se intentará enviar vía Microsoft Graph (o encolar si no hay email real en el destino)."
-        : "Conecta Outlook primero.";
+        ? "Se intentará enviar vía Microsoft Graph."
+        : "Sin Outlook: conecta o usa «Simular envío (demo)».";
     }
     if (canal === "whatsapp") {
       return status?.whatsapp.connected
-        ? "Se intentará enviar vía WhatsApp Cloud API (o encolar si no hay teléfono en el destino)."
-        : "Conecta WhatsApp primero.";
+        ? "Se intentará enviar vía WhatsApp Cloud API."
+        : "Sin WhatsApp: conecta o usa «Simular envío (demo)».";
     }
     return "";
   }
@@ -224,8 +323,30 @@ export function HoyClient({
           <span className="rounded-full border border-warn/30 bg-[#f5e6c8] px-3 py-1 text-xs font-medium text-warn">
             Validar [CONFIRMAR] antes de enviar
           </span>
+          <button
+            type="button"
+            onClick={toggleDemo}
+            className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+              demoMode
+                ? "border-gold/50 bg-[#f8f1de] text-warn"
+                : "border-border bg-cream-card text-navy/60"
+            }`}
+          >
+            {demoMode ? "DEMO ON" : "Demo"}
+          </button>
         </div>
       </div>
+
+      {showConnections && (
+        <CanalesPanel
+          status={status}
+          demoMode={demoMode}
+          onOpenOutlook={() => setOutlookOpen(true)}
+          onOpenWhatsApp={() => setWaOpen(true)}
+          onSimularLlamada={onSimularLlamada}
+          onConfirmarVisita={onConfirmarVisita}
+        />
+      )}
 
       {showConnections && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -237,28 +358,19 @@ export function HoyClient({
             connected={Boolean(status?.whatsapp.connected)}
             label="WhatsApp"
           />
-          <button
-            type="button"
-            onClick={() => setOutlookOpen(true)}
-            className="text-xs underline text-navy/60 hover:text-navy"
-          >
-            Gestionar Outlook
-          </button>
-          <button
-            type="button"
-            onClick={() => setWaOpen(true)}
-            className="text-xs underline text-navy/60 hover:text-navy"
-          >
-            Gestionar WhatsApp
-          </button>
+          <Link href="/agentes" className="text-xs underline text-navy/60">
+            Hablar con agentes →
+          </Link>
         </div>
       )}
 
       <div className="mb-4 rounded-[10px] border border-border bg-[#eef2f8] px-4 py-3 text-sm leading-relaxed">
         <strong>Modo ops:</strong> los agentes ya prepararon el craft. Tú solo{" "}
         <strong>Apruebas · Editas · Envías · Agendas visita</strong>. Nada sale
-        sin tu OK. Email requiere Outlook conectado; WhatsApp requiere Cloud API.
-        {status?.forceMockSend ? " Mock forzado (FORCE_MOCK_SEND=1)." : ""}
+        sin tu OK.
+        {demoMode
+          ? " · Modo DEMO: puedes simular envíos sin Azure/Meta."
+          : " Email/WA requieren conexión (o activa Demo)."}
       </div>
 
       <div
@@ -353,12 +465,24 @@ export function HoyClient({
                       )}
                       {t.acciones.includes("enviar") && (
                         <Btn ok disabled={busy} onClick={() => openSend(t)}>
-                          {t.canal === "telefono" ? "Marcar lista" : "Enviar"}
+                          {t.canal === "telefono"
+                            ? "Simular / marcar"
+                            : "Enviar"}
                         </Btn>
                       )}
                       {t.acciones.includes("agendar") && (
                         <Btn disabled={busy} onClick={() => onAgendar(t.id)}>
                           Agendar visita
+                        </Btn>
+                      )}
+                      {t.acciones.includes("simular_llamada") && (
+                        <Btn
+                          disabled={busy}
+                          onClick={() =>
+                            onSimularLlamada("Agendó visita").then(refresh)
+                          }
+                        >
+                          Simular llamada
                         </Btn>
                       )}
                     </>
@@ -373,11 +497,11 @@ export function HoyClient({
       <h2 className="mb-2 mt-8 text-lg font-semibold">
         Lo que hicieron los agentes hoy{" "}
         <span className="text-sm font-normal text-navy/50">
-          actualizado 07:28
+          actualizado 07:30
         </span>
       </h2>
       <div className="rounded-[10px] border border-border bg-cream-card p-3">
-        {feed.slice(0, 8).map((f) => (
+        {feed.slice(0, 10).map((f) => (
           <div
             key={f.id}
             className={`flex gap-3 border-b border-border/70 py-2.5 text-sm last:border-0 ${
@@ -397,6 +521,10 @@ export function HoyClient({
       <p className="mt-5 text-sm text-navy/70">
         <Link href="/direccion" className="underline">
           Ver dashboard Dirección →
+        </Link>
+        {" · "}
+        <Link href="/agentes" className="underline">
+          Agentes
         </Link>
         {" · "}
         <button
@@ -457,7 +585,7 @@ export function HoyClient({
 
       <Modal
         open={!!sendTask}
-        title="Confirmar envío"
+        title={needsDemoOffer || demoMode ? "Envío / simulación DEMO" : "Confirmar envío"}
         size="sm"
         onClose={() => setSendId(null)}
         footer={
@@ -469,19 +597,51 @@ export function HoyClient({
             >
               Cancelar
             </button>
-            <button
-              type="button"
-              disabled={busy}
-              className="min-h-11 rounded-lg bg-ok px-4 text-sm font-medium text-white disabled:opacity-50"
-              onClick={confirmSend}
-            >
-              Confirmar envío
-            </button>
+            {(needsDemoOffer || demoMode || sendTask?.canal === "telefono") && (
+              <button
+                type="button"
+                disabled={busy}
+                className="min-h-11 rounded-lg border border-gold/50 bg-[#f8f1de] px-4 text-sm font-bold text-warn disabled:opacity-50"
+                onClick={() => confirmSend(true)}
+              >
+                Simular envío (DEMO)
+              </button>
+            )}
+            {!needsDemoOffer && !demoMode && sendTask?.canal !== "telefono" && (
+              <button
+                type="button"
+                disabled={busy}
+                className="min-h-11 rounded-lg bg-ok px-4 text-sm font-medium text-white disabled:opacity-50"
+                onClick={() => confirmSend(false)}
+              >
+                Confirmar envío
+              </button>
+            )}
+            {needsDemoOffer && (
+              <button
+                type="button"
+                className="min-h-11 rounded-lg border border-border px-3 text-sm"
+                onClick={() => {
+                  if (
+                    sendTask?.canal === "whatsapp"
+                  )
+                    setWaOpen(true);
+                  else setOutlookOpen(true);
+                }}
+              >
+                Conectar canal
+              </button>
+            )}
           </>
         }
       >
         {sendTask && (
           <>
+            {(needsDemoOffer || demoMode) && (
+              <div className="mb-3 rounded-lg border border-gold/40 bg-[#f8f1de] px-3 py-2 text-xs font-semibold text-warn">
+                DEMO — no se enviará correo/WA/llamada real
+              </div>
+            )}
             <p className="m-0 text-sm">
               <strong>{sendTask.titulo}</strong>
               <br />

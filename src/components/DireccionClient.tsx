@@ -1,6 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { CANAL_FUNNEL_POTENCIAL, readDemoClient } from "@/lib/demo";
+import { CanalesPanel } from "./CanalesPanel";
+import {
+  OutlookConnectModal,
+  WhatsAppConnectModal,
+  useConnections,
+} from "./ConnectModals";
 
 type Props = {
   metrica: Record<string, unknown> | null;
@@ -33,6 +41,15 @@ export function DireccionClient({
   estrategia,
   wow,
 }: Props) {
+  const { status, refresh } = useConnections();
+  const [demoMode, setDemoMode] = useState(false);
+  const [outlookOpen, setOutlookOpen] = useState(false);
+  const [waOpen, setWaOpen] = useState(false);
+
+  useEffect(() => {
+    setDemoMode(readDemoClient());
+  }, []);
+
   const kpis = [
     {
       label: "Colegios contactados",
@@ -103,8 +120,73 @@ export function DireccionClient({
         <Link href="/hoy" className="underline">
           Hoy
         </Link>
+        . Habla con los agentes en{" "}
+        <Link href="/agentes" className="underline">
+          Agentes
+        </Link>
         .
       </div>
+
+      <CanalesPanel
+        compact
+        status={status}
+        demoMode={demoMode}
+        onOpenOutlook={() => setOutlookOpen(true)}
+        onOpenWhatsApp={() => setWaOpen(true)}
+      />
+
+      <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
+        <h2 className="m-0 text-base font-semibold">
+          Potencial del sistema · Cómo llenamos la cohorte
+        </h2>
+        <p className="mt-1 text-xs text-navy/55">
+          Embudo por canal → visitas → matrículas · números{" "}
+          <strong>EJEMPLO</strong> · live vs piloto
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-navy/50">
+                <th className="py-2 pr-2 font-semibold">Canal</th>
+                <th className="py-2 pr-2 font-semibold">Estado</th>
+                <th className="py-2 pr-2 font-semibold">Contactos</th>
+                <th className="py-2 pr-2 font-semibold">Visitas</th>
+                <th className="py-2 font-semibold">Matrículas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CANAL_FUNNEL_POTENCIAL.map((r) => (
+                <tr key={r.canal} className="border-b border-border/70">
+                  <td className="py-2 pr-2 font-medium">{r.canal}</td>
+                  <td className="py-2 pr-2">
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                        r.estado === "live"
+                          ? "border-ok/30 bg-[#e8f5ee] text-ok"
+                          : r.estado === "piloto" || r.estado === "drafts"
+                            ? "border-gold/40 bg-[#f8f1de] text-warn"
+                            : "border-border bg-cream text-navy/65"
+                      }`}
+                    >
+                      {r.estadoLabel}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-2">{r.contactos}</td>
+                  <td className="py-2 pr-2">{r.visitas}</td>
+                  <td className="py-2">{r.matriculas}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-navy/60">
+          <strong>Cohortes regionales (Región / Convenios):</strong> alcaldías,
+          secretarías y gobernaciones pueden financiar cupos de docentes en la
+          región — palanca EJEMPLO para cerrar el gap vs meta 40. Outlook/WA
+          requieren credenciales TI; LinkedIn = borradores; Llamada IA y Región =
+          piloto.
+        </p>
+      </section>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {kpis.map((k) => (
@@ -178,21 +260,6 @@ export function DireccionClient({
               </div>
             ))}
           </div>
-          <svg
-            viewBox="0 0 320 48"
-            width="100%"
-            height="48"
-            className="mt-4"
-            aria-hidden="true"
-          >
-            <polyline
-              fill="none"
-              stroke="#1a2b4a"
-              strokeWidth="2"
-              points="0,4 45,8 90,18 135,22 180,28 225,32 270,36 320,40"
-            />
-            <circle cx="320" cy="40" r="3.5" fill="#c4a35a" />
-          </svg>
         </section>
 
         <section className="rounded-[10px] border border-border bg-cream-card p-4">
@@ -281,8 +348,25 @@ export function DireccionClient({
           <Link href="/hoy" className="underline">
             Abrir cola de Mercadeo (Hoy)
           </Link>
+          {" · "}
+          <Link href="/agentes" className="underline">
+            Agentes
+          </Link>
         </p>
       </section>
+
+      <OutlookConnectModal
+        open={outlookOpen}
+        onClose={() => setOutlookOpen(false)}
+        status={status}
+        onChanged={refresh}
+      />
+      <WhatsAppConnectModal
+        open={waOpen}
+        onClose={() => setWaOpen(false)}
+        status={status}
+        onChanged={refresh}
+      />
     </>
   );
 }

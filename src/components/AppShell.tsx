@@ -105,6 +105,9 @@ export function AppShell({
               <NavLink href="/actividad" active={pathname === "/actividad"}>
                 Actividad
               </NavLink>
+              <NavLink href="/agentes" active={pathname === "/agentes"}>
+                Agentes
+              </NavLink>
               <span className="block cursor-not-allowed rounded-lg px-3 py-2 text-sm text-navy/35">
                 Colegios
               </span>
@@ -124,6 +127,9 @@ export function AppShell({
               <NavLink href="/actividad" active={pathname === "/actividad"}>
                 Actividad
               </NavLink>
+              <NavLink href="/agentes" active={pathname === "/agentes"}>
+                Agentes
+              </NavLink>
               <NavLink href="/hoy" active={pathname === "/hoy"}>
                 Vista Hoy
               </NavLink>
@@ -140,6 +146,9 @@ export function AppShell({
               <MobileTab href="/actividad" active={pathname === "/actividad"}>
                 Actividad
               </MobileTab>
+              <MobileTab href="/agentes" active={pathname === "/agentes"}>
+                Agentes
+              </MobileTab>
             </>
           ) : (
             <>
@@ -148,6 +157,9 @@ export function AppShell({
               </MobileTab>
               <MobileTab href="/actividad" active={pathname === "/actividad"}>
                 Actividad
+              </MobileTab>
+              <MobileTab href="/agentes" active={pathname === "/agentes"}>
+                Agentes
               </MobileTab>
               <MobileTab href="/hoy" active={pathname === "/hoy"}>
                 Hoy

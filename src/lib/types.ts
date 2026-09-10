@@ -1,6 +1,13 @@
 export type Rol = "mercadeo" | "direccion";
 
-export type Canal = "email" | "whatsapp" | "telefono" | "email_wa";
+export type Canal =
+  | "email"
+  | "whatsapp"
+  | "telefono"
+  | "email_wa"
+  | "linkedin"
+  | "visita"
+  | "region";
 
 export type EstadoTarea =
   | "pendiente"
@@ -15,11 +22,21 @@ export type TipoTarea =
   | "wa_followup"
   | "email_segmento"
   | "guion_llamada"
+  | "llamada"
   | "invitacion_visita"
   | "secuencia_d"
-  | "wa_programa";
+  | "wa_programa"
+  | "linkedin_borrador"
+  | "carta_secretaria"
+  | "convenio_region";
 
-export type EstadoEnvio = "queued" | "sent_mock" | "sent" | "failed" | "blocked_stub";
+export type EstadoEnvio =
+  | "queued"
+  | "sent_mock"
+  | "sent"
+  | "failed"
+  | "blocked_stub"
+  | "demo";
 
 export interface User {
   id: string;
@@ -106,8 +123,11 @@ export interface MetricaDiaria {
 export const CANAL_LABEL: Record<string, string> = {
   email: "Email",
   whatsapp: "WhatsApp",
-  telefono: "Teléfono",
+  telefono: "Llamada",
   email_wa: "Email+WA",
+  linkedin: "LinkedIn",
+  visita: "Visita campus",
+  region: "Región / Convenios",
 };
 
 export const ESTADO_LABEL: Record<string, string> = {

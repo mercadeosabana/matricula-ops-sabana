@@ -121,8 +121,10 @@ export async function PATCH(
   }
 
   if (action === "enviar") {
+    const status = getConnectionStatus();
+    const demoSend = body.demo === true || body.demo === "1";
     const textCheck = `${tarea.asunto}\n${tarea.cuerpo}`;
-    if (hasUnresolvedConfirm(textCheck)) {
+    if (!demoSend && hasUnresolvedConfirm(textCheck)) {
       return NextResponse.json(
         {
           error:
@@ -133,14 +135,68 @@ export async function PATCH(
       );
     }
 
-    const status = getConnectionStatus();
-    const forceMock = status.forceMockSend;
-    let estadoEnvio: EstadoEnvio = "sent_mock";
-    let message = "Envío registrado (mock)";
+    const forceMock = status.forceMockSend || demoSend;
+    let estadoEnvio: EstadoEnvio = demoSend ? "demo" : "sent_mock";
+    let message = demoSend
+      ? "Envío simulado (DEMO) — no salió a Graph/Meta"
+      : "Envío registrado (mock)";
 
     if (tarea.canal === "telefono") {
-      estadoEnvio = forceMock ? "sent_mock" : "sent";
-      message = "Llamada marcada como lista";
+      estadoEnvio = demoSend ? "demo" : forceMock ? "sent_mock" : "sent";
+      message = demoSend
+        ? "Llamada simulada (DEMO)"
+        : "Llamada marcada como lista";
+    } else if (tarea.canal === "linkedin" || tarea.canal === "visita") {
+      return NextResponse.json(
+        {
+          error:
+            tarea.canal === "linkedin"
+              ? "LinkedIn solo tiene borradores — copia/pega tras aprobar"
+              : "Usa Agendar visita para cupos de campus",
+          code: "NO_SEND",
+        },
+        { status: 400 }
+      );
+    } else if (tarea.canal === "region") {
+      // Carta a secretaría: demo or mock path (email-like, no Graph required in demo)
+      if (demoSend || forceMock) {
+        estadoEnvio = demoSend ? "demo" : "sent_mock";
+        message = demoSend
+          ? "[DEMO] Carta a Secretaría simulada — no enviada"
+          : "Carta Región registrada (mock)";
+      } else if (!isOutlookConnected()) {
+        return NextResponse.json(
+          {
+            error: "Conecta Outlook o usa Simular envío (demo)",
+            code: "OUTLOOK_NOT_CONNECTED",
+          },
+          { status: 400 }
+        );
+      } else {
+        const result = await sendViaOutlook({
+          to: tarea.dest,
+          subject: tarea.asunto || tarea.titulo,
+          body: tarea.cuerpo,
+        });
+        if (!result.ok) {
+          return NextResponse.json(
+            { error: result.error, code: result.code },
+            { status: 400 }
+          );
+        }
+        estadoEnvio =
+          result.mode === "graph"
+            ? "sent"
+            : result.mode === "queued"
+              ? "queued"
+              : "sent_mock";
+        message =
+          result.mode === "graph"
+            ? "Carta Región enviada vía Outlook"
+            : result.mode === "queued"
+              ? "Carta Región encolada"
+              : "Carta Región (mock)";
+      }
     } else if (tarea.canal === "email" || tarea.canal === "email_wa") {
       if (!forceMock && !isOutlookConnected()) {
         return NextResponse.json(
@@ -170,7 +226,9 @@ export async function PATCH(
         message = "Email encolado para envío (sin destinatario real o cola)";
       } else {
         estadoEnvio = "sent_mock";
-        message = "Envío registrado (mock · FORCE_MOCK_SEND=1)";
+        message = demoSend
+          ? "Envío simulado (DEMO) — no salió a Graph"
+          : "Envío registrado (mock · FORCE_MOCK_SEND=1)";
       }
     } else if (tarea.canal === "whatsapp") {
       if (!forceMock && !isWhatsAppConnected()) {
@@ -200,7 +258,9 @@ export async function PATCH(
         message = "WhatsApp encolado para envío";
       } else {
         estadoEnvio = "sent_mock";
-        message = "Envío registrado (mock · FORCE_MOCK_SEND=1)";
+        message = demoSend
+          ? "Envío simulado (DEMO) — no salió a Meta"
+          : "Envío registrado (mock · FORCE_MOCK_SEND=1)";
       }
     }
 
@@ -227,12 +287,16 @@ export async function PATCH(
 
     const verb =
       tarea.canal === "telefono"
-        ? "Marcó lista para llamada"
-        : estadoEnvio === "sent_mock"
-          ? "Envió (mock)"
-          : estadoEnvio === "queued"
-            ? "Encoló envío"
-            : "Envió";
+        ? demoSend
+          ? "[DEMO] Simuló llamada"
+          : "Marcó lista para llamada"
+        : estadoEnvio === "demo"
+          ? "[DEMO] Simuló envío"
+          : estadoEnvio === "sent_mock"
+            ? "Envió (mock)"
+            : estadoEnvio === "queued"
+              ? "Encoló envío"
+              : "Envió";
     await pushActividad({
       time,
       actor,
