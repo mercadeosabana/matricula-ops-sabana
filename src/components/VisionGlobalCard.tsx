@@ -120,8 +120,8 @@ export function VisionGlobalCard({
 
       {variant === "hoy" && (
         <p className="mt-3 mb-0 text-xs text-navy/60">
-          Abajo: <strong>Respondieron</strong> + cola playbook + la{" "}
-          <strong>rebanada de esta semana</strong>. Plan 4 semanas zona en{" "}
+          Arriba está el tablero <strong>Estrategia de esta semana</strong>. Aquí
+          el marco global. Plan 4 semanas en{" "}
           <Link href="/playbook" className="font-semibold underline" style={{ color: "#1a2b4a" }}>
             /playbook
           </Link>

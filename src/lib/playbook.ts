@@ -416,3 +416,160 @@ export function estadoZonaPill(estado: SemanaZonaEstado): string {
       return "Planeada";
   }
 }
+
+/** Estado live de respuesta en el tablero semanal (Hoy) */
+export type EstadoRespuestaSemana =
+  | "sin_respuesta"
+  | "respondio"
+  | "proxima_accion";
+
+export type CanalSemana = "correo" | "linkedin" | "whatsapp";
+
+export type EstrategiaSemanaRow = {
+  id: string;
+  colegioContacto: string;
+  tipo: "financiador" | "interesado";
+  canal: CanalSemana;
+  mensajePreview: string;
+  mensajeFull: string;
+  estadoRespuesta: EstadoRespuestaSemana;
+  proximaAccion: string;
+};
+
+export const ESTADO_RESPUESTA_LABEL: Record<EstadoRespuestaSemana, string> = {
+  sin_respuesta: "Sin respuesta",
+  respondio: "Respondió",
+  proxima_accion: "Próxima acción",
+};
+
+export const CANAL_SEMANA_LABEL: Record<CanalSemana, string> = {
+  correo: "Correo",
+  linkedin: "LinkedIn",
+  whatsapp: "WhatsApp",
+};
+
+/** Semana activa en el tablero operativo (Neiva demo) */
+export const ESTRATEGIA_SEMANA_META = {
+  territorio: "Neiva / Huila",
+  rango: "8–14 sep 2026",
+  semanaLabel: "S2 · cerrar cupos + 1ª ola docentes",
+  colegiosArranque: [
+    "Secretaría de Educación Huila",
+    "IE Normal Superior de Neiva",
+    "Alcaldía de Neiva (piloto)",
+    "Colegio Santa Librada",
+    "INEM Julian Motta Salas",
+    "Colegio Champagnat Neiva",
+  ],
+  playbookHref: "/playbook",
+} as const;
+
+/**
+ * Tablero operativo de la semana · ~7 filas Neiva con estados mixtos.
+ * Natalia aprueba / marca respondió y ve la fila actualizarse.
+ */
+export const ESTRATEGIA_SEMANA_DEMO: EstrategiaSemanaRow[] = [
+  {
+    id: "es-1",
+    colegioContacto: "Secretaría de Educación · Huila",
+    tipo: "financiador",
+    canal: "correo",
+    mensajePreview:
+      "Retomo cupos cohorte 2027-1 Neiva. ¿Visita financiador esta semana?",
+    mensajeFull:
+      "Estimada Secretaría:\n\nRetomo los cupos de la cohorte 2027-1 para Neiva / Huila. Tenemos 8 cupos en negociación.\n\n¿Agendamos visita financiador esta semana (jue–vie AM) para cerrar?\n\nFacultad de Educación · Unisabana",
+    estadoRespuesta: "sin_respuesta",
+    proximaAccion: "Aprobar y enviar correo",
+  },
+  {
+    id: "es-2",
+    colegioContacto: "IE Normal Superior de Neiva · Rectoría",
+    tipo: "financiador",
+    canal: "correo",
+    mensajePreview:
+      "Seguimiento cupos docentes Normal · propuesta visitá el jueves.",
+    mensajeFull:
+      "Estimada Rectoría:\n\nGracias por los 3 cupos ya cerrados. Adjunto propuesta de visita el jueves AM para revisar 2 cupos adicionales Maestría en Educación.\n\n¿Confirmamos horario?",
+    estadoRespuesta: "respondio",
+    proximaAccion: "Agendar visita financiador · jue 11",
+  },
+  {
+    id: "es-3",
+    colegioContacto: "Alcaldía de Neiva · Educación (piloto)",
+    tipo: "financiador",
+    canal: "linkedin",
+    mensajePreview:
+      "Hola — piloto cupos docentes Neiva 2027-1. ¿15 min esta semana?",
+    mensajeFull:
+      "Hola, soy de Facultad de Educación Unisabana.\n\nEstamos abriendo un piloto de cupos financiados para docentes de Neiva (cohorte 2027-1).\n\n¿Le parece una llamada de 15 min esta semana?",
+    estadoRespuesta: "sin_respuesta",
+    proximaAccion: "Aprobar borrador LinkedIn",
+  },
+  {
+    id: "es-4",
+    colegioContacto: "Docente · Normal Superior Neiva",
+    tipo: "interesado",
+    canal: "whatsapp",
+    mensajePreview:
+      "¿Desayuno campus Chía o video 20 min Maestría Educación?",
+    mensajeFull:
+      "Hola, soy de Facultad de Educación Unisabana. ¿Le parece un desayuno campus en Chía o una video llamada de 20 min sobre Maestría en Educación 2027-1?",
+    estadoRespuesta: "respondio",
+    proximaAccion: "Confirmar desayuno campus · sáb 13",
+  },
+  {
+    id: "es-5",
+    colegioContacto: "Coordinación · Colegio demo Neiva",
+    tipo: "interesado",
+    canal: "correo",
+    mensajePreview:
+      "Brochure Pedagogía 2027-1 + agenda video llamada.",
+    mensajeFull:
+      "Hola,\n\nVimos su interés en Pedagogía. Le adjunto el brochure 2027-1.\n\n¿Agendamos una video llamada de 20 minutos esta semana?\n\nUnisabana · Facultad de Educación",
+    estadoRespuesta: "sin_respuesta",
+    proximaAccion: "Aprobar y enviar brochure",
+  },
+  {
+    id: "es-6",
+    colegioContacto: "Colegio Santa Librada · Rectoría",
+    tipo: "financiador",
+    canal: "correo",
+    mensajePreview:
+      "Follow-up D+3 · cupos docentes Santa Librada Neiva.",
+    mensajeFull:
+      "Estimada Rectoría:\n\nHace tres días enviamos la carta de cupos docentes. ¿Pudieron revisarla?\n\nQuedo atenta para una visita corta o envío de propuesta formal.",
+    estadoRespuesta: "proxima_accion",
+    proximaAccion: "Enviar follow-up D+3 hoy",
+  },
+  {
+    id: "es-7",
+    colegioContacto: "Docente · INEM Julián Motta Salas",
+    tipo: "interesado",
+    canal: "linkedin",
+    mensajePreview:
+      "Conexión LI · Maestría Educación Neiva · ¿video esta semana?",
+    mensajeFull:
+      "Hola, vi su perfil en educación en Neiva. En Unisabana abrimos cohorte 2027-1 de Maestría en Educación con opciones de cupo.\n\n¿Le parece una video llamada corta esta semana?",
+    estadoRespuesta: "sin_respuesta",
+    proximaAccion: "Aprobar mensaje LinkedIn",
+  },
+  {
+    id: "es-8",
+    colegioContacto: "Coordinadora · Champagnat Neiva",
+    tipo: "interesado",
+    canal: "correo",
+    mensajePreview:
+      "Gracias por responder · propongo video jueves 4 pm.",
+    mensajeFull:
+      "Hola,\n\nGracias por responder. ¿Le parece video llamada el jueves a las 4 pm para revisar Pedagogía 2027-1 y requisitos?\n\nUnisabana · Admisiones Educación",
+    estadoRespuesta: "respondio",
+    proximaAccion: "Confirmar video llamada · jue 16:00",
+  },
+];
+
+export function conteoCanalesSemana(rows: EstrategiaSemanaRow[]) {
+  const correos = rows.filter((r) => r.canal === "correo").length;
+  const linkedin = rows.filter((r) => r.canal === "linkedin").length;
+  const whatsapp = rows.filter((r) => r.canal === "whatsapp").length;
+  return { correos, linkedin, whatsapp, total: rows.length };
+}

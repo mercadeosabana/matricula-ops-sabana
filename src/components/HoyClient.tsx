@@ -14,6 +14,7 @@ import {
 import { VisionGlobalCard } from "./VisionGlobalCard";
 import { MetasCohortePanel } from "./MetasCohortePanel";
 import { PlaybookHoySections } from "./PlaybookHoySections";
+import { EstrategiaSemanaBoard } from "./EstrategiaSemanaBoard";
 import type { MetasCohorte } from "@/lib/types";
 import { Modal } from "./Modal";
 import { toast } from "./Toast";
@@ -463,16 +464,32 @@ export function HoyClient({
         </div>
       </div>
 
-      <VisionGlobalCard variant="hoy" />
+      {/* 1) Tablero operativo de la semana — primero para Natalia */}
+      <EstrategiaSemanaBoard />
 
-      <MetasCohortePanel
-        initialMetas={metas}
-        initialTotales={metasTotales}
-        canEdit={false}
-        variant="compact"
-      />
-
+      {/* 2) Respondieron + Cola playbook (lista operativa) */}
       <PlaybookHoySections />
+
+      {/* 3) Visión global + metas — secundario / colapsado */}
+      <details className="mb-4 rounded-[10px] border border-border bg-cream-card open:shadow-sm">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-navy marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex flex-wrap items-center justify-between gap-2">
+            <span>Visión global y metas cohorte</span>
+            <span className="text-xs font-normal text-navy/50">
+              Secundario · abrir si necesitas el marco
+            </span>
+          </span>
+        </summary>
+        <div className="border-t border-border px-2 pb-2 pt-1">
+          <VisionGlobalCard variant="hoy" />
+          <MetasCohortePanel
+            initialMetas={metas}
+            initialTotales={metasTotales}
+            canEdit={false}
+            variant="compact"
+          />
+        </div>
+      </details>
 
       {/* Hero: Semana de mercado — la rebanada */}
       <section className="mb-4 rounded-[12px] border border-navy/20 bg-navy px-4 py-4 text-white shadow-sm">

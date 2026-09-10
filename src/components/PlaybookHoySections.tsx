@@ -14,7 +14,6 @@ import {
   audienciaLabel,
   type NextStepPlaybook,
 } from "@/lib/playbook";
-import { Plan4SemanasZona } from "./Plan4SemanasZona";
 import { toast } from "./Toast";
 
 /** Respondieron hoy (arriba) + Cola del playbook (nuevos fríos, cap ~15/día) */
@@ -213,7 +212,13 @@ export function PlaybookHoySections() {
         </div>
       </section>
 
-      <Plan4SemanasZona variant="compact" showChannels={false} />
+      <p className="m-0 text-xs text-navy/55">
+        Marco de 4 semanas (S1–S4 Neiva/Huila) en{" "}
+        <Link href="/playbook" className="font-semibold underline" style={{ color: "#1a2b4a" }}>
+          /playbook
+        </Link>
+        .
+      </p>
     </div>
   );
 }
