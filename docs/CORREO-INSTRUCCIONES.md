@@ -18,14 +18,44 @@ Te comparto el enlace al demo de **Matrícula Ops** (operación de matrícula de
 
 **https://matricula-ops-sabana.vercel.app**
 
-## Quién es quién en el login
+## Acceso (correo + contraseña)
 
-En la pantalla de entrada hay dos botones:
+La organización es dueña de CRM, actividad, embudo y gasto. Cada persona entra con su correo.
 
-1. **Laura Natalia · Mercadeo** → entra a **Hoy** (cola del día: aprobar, editar, enviar, agendar) + CRM, post-visita, biblioteca, capacidad, sala de guerra.
-2. **Laura Lucía · Dirección** → entra al **Dashboard** (embudo, $ vs meta, CAC EJEMPLO, potencial por canal, estrategia) + sala de guerra / capacidad.
+| Persona | Correo | Rol | Contraseña demo |
+|---------|--------|-----|-----------------|
+| **Laura Natalia** | `laura.natalia@unisabana.edu.co` | Mercadeo | `sabana2027` |
+| **Laura Lucía** | `laura.lucia@unisabana.edu.co` | Dirección | `sabana2027` |
+| **Ivan Auli** | `ivan.auli@unisabana.edu.co` | Dirección / admin | `sabana2027` |
 
-Son roles demo por persona; no hace falta contraseña.
+También hay **«Entrar demo rápido»** en el login (sin tipear clave) para la presentación.
+
+**Equipo (`/equipo`)** — solo Dirección (Lucía e Ivan): invitar personas (varias de Mercadeo en paralelo), desactivar/reactivar, reset de clave. Al desactivar Mercadeo aparece **«Pasar pendientes a…»** (recomendado al reemplazar). El historial conserva el nombre del actor original. Si no se pasan pendientes, la persona nueva igual ve toda la data de la facultad.
+
+## Modelo de la semana (Hoy · Mercadeo)
+
+**Hoy** es la *rebanada semanal* de la torta de mercado:
+
+1. **Semana de mercado** — zona/segmento + meta (ej. «Colegios + 1 secretaría · meta: equilibrio + N conversaciones»). Demo: **Neiva / Huila**, cupos financiados **12 / 20** (punto de equilibrio).
+2. **Financiadores** primero (colegios / alcaldías / secretarías que pagan cupos).
+3. **Estudiantes / interesados** después (docentes). El outreach a docentes en el territorio queda en segundo plano hasta el equilibrio (o «Siguiente: buscar estudiantes» cuando se alcanza).
+4. **Cómo toco hoy** — Correo (Outlook) + WhatsApp; LinkedIn = borradores; Llamada IA bajo Soporte; **Invitación a desayuno** solo para leads calientes («Listos para desayuno» + Agendar).
+5. Palabras planas: programa, cohorte, sede, financiador, interesado.
+
+## Qué mira Laura Lucía (Dirección)
+
+Panel **gerencial** en 5 segundos:
+
+- Por programa: meta vs real, % avance, gap (faltan N), ritmo (al día / atrasado).
+- Portfolio: tiempo (horas equipo + calendario desde inicio), dinero vs presupuesto, CAC / costo por visita / costo por matrícula.
+- Cupos financiadores vs punto de equilibrio (Región · Neiva).
+- **Gran torta** Colombia (EJEMPLO) → abordados → toques por canal → embudo financiadores + embudo interesados.
+- Hoy = misma historia, rebanada semanal.
+
+## Quién es quién
+
+1. **Mercadeo** → **Hoy** (ejecución semanal) + CRM, post-visita, biblioteca, capacidad, sala de guerra.
+2. **Dirección** → **Dashboard** gerencial + Equipo + sala de guerra / capacidad.
 
 ## Qué hacen los agentes (6)
 
@@ -33,65 +63,43 @@ Los agentes **proponen** craft e insights. **Nadie envía solo** — siempre hay
 
 | Agente | Qué hace |
 |--------|----------|
-| **Captación** | Outreach a colegios: email frío, WhatsApp, borradores LinkedIn, guion de llamada 90 s. |
-| **Admisiones** | Visitas campus Chía (agenda 2 h), cupos sábados, show-up, puente a inscripción / post-visita. |
-| **Inteligencia** | Segmentación por zona/programa, prioridades, lectura del embudo (cifras EJEMPLO). |
-| **Orquestadora** | Ordena la cola de Hoy, secuencias D+3 / D+7 / D+14, **brief semanal** (Sala de guerra). |
-| **Región** | Convenios territoriales: cartas a secretarías / alcaldías / gobernaciones para cohortes regionales (la entidad financia maestrías de docentes en su jurisdicción). |
-| **Guardian** | 6.º agente: revisa craft antes de enviar → **OK** o **BLOQUEAR** (tono, `[CONFIRMAR]`, claims). En Hoy hay «Pasar por Guardian» al enviar / simular. |
+| **Captación** | Outreach: correo, WhatsApp, borradores LinkedIn, guion llamada 90 s. |
+| **Admisiones** | Invitación a desayuno (leads calientes), agenda, show-up, post-visita. |
+| **Inteligencia** | Segmentación por zona/programa, lectura del embudo (cifras EJEMPLO). |
+| **Orquestadora** | Ordena la cola de Hoy (financiadores → interesados), brief semanal. |
+| **Región** | Convenios: cartas a secretarías / alcaldías para cupos financiados. |
+| **Guardian** | Revisa craft antes de enviar → OK o BLOQUEAR. |
 
-Pueden chatear con cada uno en **Agentes** (`/agentes`). Sin API key el chat usa respuestas demo locales; con `OPENAI_API_KEY` / `XAI_API_KEY` / `GROQ_API_KEY` usa LLM real.
-
-## Páginas nuevas (equipo de admisiones)
+## Páginas
 
 | Página | Para quién | Qué ver |
 |--------|------------|---------|
-| `/crm` | Mercadeo (+ Dirección) | Colegios + leads (12), etapa funnel, owner Laura Natalia, próximo toque, canal origen, score **caliente/tibio/frío**, detalle al clic. |
-| `/post-visita` | Mercadeo | Checklist docs / pago / beca / reminders D+1 y D+3 · 2 leads seed en post-visita. |
-| `/sala-guerra` | Ambas | Brief semanal: embudo, top 10 acciones, territorios, costo-por-matrícula EJEMPLO · botón **Generar brief de la semana** (voz Orquestadora). |
-| `/biblioteca` | Ambas | Ofertas one-pager (Educación, Pedagogía, Dirección, DI), early bird, convenio regional, visita 2 h · copiar markdown · **aprobada por Dirección**. |
-| `/capacidad` | Ambas | Cupos por programa × sede (Chía + Neiva) · «Faltan N para abrir cohorte regional». |
-| `/agenda` | Ambas | Eventos Outlook / DEMO de visitas agendadas. |
-| `/hoy` | Mercadeo | Score badges en tareas + checkbox Guardian al enviar. |
-| `/direccion` | Dirección | Panel **CAC / costo por visita / costo por matrícula EJEMPLO**. |
+| `/hoy` | Mercadeo | Semana de mercado · financiadores / interesados · desayuno |
+| `/direccion` | Dirección | Torta + avance por programa + costos + equilibrio |
+| `/equipo` | Dirección (Lucía, Ivan) | Usuarios, invitaciones, desactivar, pasar pendientes |
+| `/crm` | Ambas | Colegios + leads · data de la org |
+| `/post-visita` | Mercadeo | Checklist docs / pago / beca |
+| `/sala-guerra` | Ambas | Brief semanal |
+| `/biblioteca` | Ambas | Ofertas one-pager |
+| `/capacidad` | Ambas | Cupos Chía + Neiva |
+| `/agenda` | Ambas | Desayunos / eventos |
+| `/agentes` | Ambas | Chat con agentes + Guardian |
 
-## Qué hace Laura Natalia cada día (Hoy)
-
-1. Revisa el panel **Canales** (Outlook, **Agenda Outlook**, WhatsApp, LinkedIn, Llamada IA, Visita campus, Región/Convenios).
-2. Aprueba / edita / envía las tareas de la cola (email, WA, llamada, LinkedIn borrador, visita, carta a Secretaría).
-3. Opcional: **Pasar por Guardian** antes de Enviar / Simular (veredicto OK o BLOQUEAR demo).
-4. En la tarea **Reunión / visita campus**, usa **«Agendar visita»**: si la agenda está conectada, crea el evento en Outlook (2 h Chía); si no, con Demo queda **DEMO: bloqueado en agenda** en Actividad. Lista en `/agenda`.
-5. Trabaja el **CRM** y **post-visita** para leads calientes.
-6. Resuelve marcas **`[CONFIRMAR]`** (precios, fechas, descuentos) antes de un envío real.
-7. Si aún no hay credenciales Azure/Meta: activa **Demo** (`?demo=1` o botón Demo) y usa **«Simular envío (DEMO)»** / agendar en DEMO para la presentación.
-
-## Qué mira Laura Lucía (Dirección)
-
-- KPIs e embudo (números **EJEMPLO**).
-- Panel **CAC / costo por visita / costo por matrícula EJEMPLO**.
-- **Sala de guerra** semanal con Natalia (brief Orquestadora).
-- **Capacidad** Chía + Neiva (apertura de cohorte regional).
-- Sección **«Potencial del sistema · Cómo llenamos la cohorte»**: canal → visitas → matrículas, live vs piloto (incluye **Agenda Outlook** y cohortes regionales vía Región).
-- Ingresos vs meta, mix por programa, estrategia 30 días.
-- Puede abrir Vista Hoy, CRM, Biblioteca, Agenda y Agentes (incl. Guardian).
-
-## Canales — estado actual
+## Canales
 
 | Canal | Estado |
 |-------|--------|
-| **Outlook (email)** | Listo en producto; falta que TI / Ivan carguen credenciales Azure (ver `docs/SETUP-OAUTH.md`). |
-| **Agenda Outlook** | Mismo OAuth + `Calendars.ReadWrite`. «Agendar visita» → evento Graph o **DEMO: bloqueado en agenda**. Ver `/agenda`. |
-| **WhatsApp Business** | Listo en producto; falta token Meta Cloud API de la facultad. |
-| **LinkedIn** | Solo **borradores** — no hay auto-envío. |
-| **Llamada IA** | **Piloto**: guion 90 s + «Simular llamada» (sin telefonía real). |
-| **Visita campus** | Agenda 2 h en seed; cupos sábados con `[CONFIRMAR]`. |
-| **Región / Convenios** | **Piloto**: carta a Secretaría para convenio territorial. |
+| **Correo (Outlook)** | Listo en producto; credenciales Azure (ver `docs/SETUP-OAUTH.md`). |
+| **Agenda** | Mismo OAuth + Calendars.ReadWrite · agendar desayuno. |
+| **WhatsApp** | Listo en producto; token Meta de la facultad. |
+| **LinkedIn** | Solo borradores. |
+| **Llamada IA** | Soporte / piloto · simulación. |
+| **Invitación a desayuno** | Solo leads calientes. |
+| **Convenio / financiador** | Carta a Secretaría · cupos vs equilibrio. |
 
 ## Regla de oro
 
-**Nada sale sin aprobación humana.** Los agentes preparan (Guardian revisa); Mercadeo da el OK; Dirección vigila el embudo, costos EJEMPLO y excepciones.
-
-Cuando tengan Azure/Meta, el mismo botón «Enviar» usa Graph / Cloud API de verdad. Hasta entonces, el modo DEMO permite mostrar el potencial completo.
+**Nada sale sin aprobación humana.** Los agentes preparan (Guardian revisa); Mercadeo da el OK; Dirección vigila equilibrio, programas y costos EJEMPLO.
 
 Quedo atento para el walkthrough.
 

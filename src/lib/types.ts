@@ -1,5 +1,7 @@
 export type Rol = "mercadeo" | "direccion";
 
+export type Audiencia = "financiador" | "estudiante";
+
 export type Canal =
   | "email"
   | "whatsapp"
@@ -41,9 +43,13 @@ export type EstadoEnvio =
 export interface User {
   id: string;
   nombre: string;
+  /** Alias visible en UI (mismo que nombre por defecto) */
+  displayName: string;
   email: string;
   rol: Rol;
   activo: boolean;
+  /** scrypt salt:hash — nunca devolver al cliente */
+  passwordHash: string;
   createdAt: string;
 }
 
@@ -102,6 +108,8 @@ export interface TareaHoy {
   aprobadaPorUserId: string | null;
   enviadaAt: string | null;
   acciones: string[];
+  /** financiador = paga cupos; estudiante = docente interesado */
+  audiencia?: Audiencia;
 }
 
 export interface Envio {
@@ -158,8 +166,8 @@ export const CANAL_LABEL: Record<string, string> = {
   telefono: "Llamada",
   email_wa: "Email+WA",
   linkedin: "LinkedIn",
-  visita: "Visita campus",
-  region: "Región / Convenios",
+  visita: "Invitación a desayuno",
+  region: "Convenio / financiador",
 };
 
 export const ESTADO_LABEL: Record<string, string> = {
@@ -167,6 +175,6 @@ export const ESTADO_LABEL: Record<string, string> = {
   aprobada: "Aprobada",
   editada: "Editada",
   enviada: "Enviada",
-  agendada: "Visita agendada",
+  agendada: "Desayuno agendado",
   descartada: "Descartada",
 };

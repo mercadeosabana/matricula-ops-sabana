@@ -6,9 +6,8 @@ import { toast } from "./Toast";
 import {
   LINKEDIN_DRAFTS,
   LLAMADA_SCRIPT_90S,
-  VISITA_SLOTS,
-  REGION_CARTA,
 } from "@/lib/demo";
+import { SEMANA_MERCADO } from "@/lib/market-story";
 import { highlightConfirm } from "@/lib/utils";
 import type { ConnectionStatusPayload } from "./ConnectModals";
 
@@ -21,6 +20,7 @@ type Props = {
   onOpenWhatsApp: () => void;
   onSimularLlamada?: (resultado: string) => Promise<void>;
   onConfirmarVisita?: (slotLabel: string) => Promise<void>;
+  onAgendarDesayuno?: (leadId: string) => void;
 };
 
 export function CanalesPanel({
@@ -31,12 +31,11 @@ export function CanalesPanel({
   onOpenAgenda,
   onOpenWhatsApp,
   onSimularLlamada,
-  onConfirmarVisita,
+  onAgendarDesayuno,
 }: Props) {
   const [liOpen, setLiOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
-  const [visitaOpen, setVisitaOpen] = useState(false);
-  const [regionOpen, setRegionOpen] = useState(false);
+  const [soporteOpen, setSoporteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const outlookOk = Boolean(status?.outlook.connected);
@@ -54,86 +53,6 @@ export function CanalesPanel({
     }
   }
 
-  async function confirmarSlot(label: string) {
-    if (!onConfirmarVisita) {
-      toast(`Cupo marcado para confirmar: ${label}`, "ok");
-      return;
-    }
-    setBusy(true);
-    try {
-      await onConfirmarVisita(label);
-      setVisitaOpen(false);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const cards = [
-    {
-      id: "outlook",
-      title: "Outlook",
-      subtitle: "Email",
-      status: outlookOk ? "Conectado" : "Conectar",
-      tone: outlookOk ? "ok" : "neutral",
-      badge: outlookOk ? null : demoMode ? "DEMO" : null,
-      onClick: onOpenOutlook,
-    },
-    {
-      id: "agenda",
-      title: "Agenda Outlook",
-      subtitle: "Calendario · visitas",
-      status: agendaOk ? "Conectada" : "Conectar agenda",
-      tone: agendaOk ? "ok" : "neutral",
-      badge: agendaOk ? null : demoMode ? "DEMO" : null,
-      onClick: () => (onOpenAgenda ? onOpenAgenda() : onOpenOutlook()),
-    },
-    {
-      id: "whatsapp",
-      title: "WhatsApp Business",
-      subtitle: "Cloud API",
-      status: waOk ? "Conectado" : "Conectar",
-      tone: waOk ? "ok" : "neutral",
-      badge: waOk ? null : demoMode ? "DEMO" : null,
-      onClick: onOpenWhatsApp,
-    },
-    {
-      id: "linkedin",
-      title: "LinkedIn",
-      subtitle: "Sin auto-envío",
-      status: "Borradores listos",
-      tone: "draft",
-      badge: null,
-      onClick: () => setLiOpen(true),
-    },
-    {
-      id: "llamada",
-      title: "Llamada IA",
-      subtitle: "90 s · sin telefonía",
-      status: "Piloto",
-      tone: "piloto",
-      badge: "Piloto",
-      onClick: () => setCallOpen(true),
-    },
-    {
-      id: "visita",
-      title: "Visita campus",
-      subtitle: "Agenda 2 h · Chía",
-      status: "Cupos sábados",
-      tone: "ok",
-      badge: null,
-      onClick: () => setVisitaOpen(true),
-    },
-    {
-      id: "region",
-      title: "Región / Convenios",
-      subtitle: "Alcaldías · SE · Gobernaciones",
-      status: "Carta lista",
-      tone: "piloto",
-      badge: "Piloto",
-      onClick: () => setRegionOpen(true),
-    },
-  ];
-
   return (
     <>
       <section
@@ -146,11 +65,12 @@ export function CanalesPanel({
             <h2
               className={`m-0 font-semibold ${compact ? "text-sm" : "text-base"}`}
             >
-              Canales
+              Cómo toco hoy
             </h2>
             {!compact && (
               <p className="mt-0.5 text-xs text-navy/55">
-                Outlook / Agenda / WA · LinkedIn · Llamada IA · Visitas · Región
+                Correo y WhatsApp primero · LinkedIn = borradores · desayuno solo
+                para calientes
               </p>
             )}
           </div>
@@ -160,61 +80,160 @@ export function CanalesPanel({
             </span>
           )}
         </div>
-        <div
-          className={`grid gap-2 ${
-            compact
-              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7"
-              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          }`}
-        >
-          {cards.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={c.onClick}
-              className={`rounded-lg border p-3 text-left transition hover:border-navy/35 hover:shadow-sm ${
-                c.tone === "ok"
-                  ? "border-ok/30 bg-[#e8f5ee]"
-                  : c.tone === "piloto"
-                    ? "border-gold/40 bg-[#f8f1de]"
-                    : c.tone === "draft"
-                      ? "border-navy/15 bg-[#eef2f8]"
-                      : "border-border bg-cream"
+
+        {/* Primary: Outlook + WhatsApp */}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onOpenOutlook}
+            className={`rounded-lg border p-3 text-left transition hover:border-navy/35 ${
+              outlookOk
+                ? "border-ok/30 bg-[#e8f5ee]"
+                : "border-border bg-cream"
+            }`}
+          >
+            <div className="text-sm font-semibold text-navy">Correo (Outlook)</div>
+            <div className="mt-0.5 text-[11px] text-navy/55">
+              Cómo escribo a financiadores e interesados
+            </div>
+            <div
+              className={`mt-2 text-xs font-medium ${
+                outlookOk ? "text-ok" : "text-navy/70"
               }`}
             >
-              <div className="flex items-start justify-between gap-1">
-                <div
-                  className={`font-semibold text-navy ${
-                    compact ? "text-xs" : "text-sm"
-                  }`}
-                >
-                  {c.title}
-                </div>
-                {c.badge && (
-                  <span className="shrink-0 rounded-full bg-gold/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-navy">
-                    {c.badge}
-                  </span>
-                )}
-              </div>
-              {!compact && (
-                <div className="mt-0.5 text-[11px] text-navy/55">{c.subtitle}</div>
-              )}
-              <div
-                className={`mt-2 font-medium ${
-                  compact ? "text-[11px]" : "text-xs"
-                } ${
-                  c.tone === "ok"
-                    ? "text-ok"
-                    : c.tone === "piloto"
-                      ? "text-warn"
-                      : "text-navy/70"
-                }`}
-              >
-                {c.status}
-              </div>
-            </button>
-          ))}
+              {outlookOk
+                ? "Listo"
+                : demoMode
+                  ? "Sin conectar · usa DEMO"
+                  : "Conectar"}
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenWhatsApp}
+            className={`rounded-lg border p-3 text-left transition hover:border-navy/35 ${
+              waOk ? "border-ok/30 bg-[#e8f5ee]" : "border-border bg-cream"
+            }`}
+          >
+            <div className="text-sm font-semibold text-navy">WhatsApp</div>
+            <div className="mt-0.5 text-[11px] text-navy/55">
+              Seguimiento rápido a interesados
+            </div>
+            <div
+              className={`mt-2 text-xs font-medium ${
+                waOk ? "text-ok" : "text-navy/70"
+              }`}
+            >
+              {waOk
+                ? "Listo"
+                : demoMode
+                  ? "Sin conectar · usa DEMO"
+                  : "Conectar"}
+            </div>
+          </button>
         </div>
+
+        {/* Secondary row */}
+        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => setLiOpen(true)}
+            className="rounded-lg border border-navy/15 bg-[#eef2f8] p-3 text-left hover:border-navy/35"
+          >
+            <div className="text-sm font-semibold">LinkedIn</div>
+            <div className="mt-1 text-xs text-navy/60">Solo borradores</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => (onOpenAgenda ? onOpenAgenda() : onOpenOutlook())}
+            className={`rounded-lg border p-3 text-left hover:border-navy/35 ${
+              agendaOk
+                ? "border-ok/30 bg-[#e8f5ee]"
+                : "border-border bg-cream"
+            }`}
+          >
+            <div className="text-sm font-semibold">Agenda</div>
+            <div className="mt-1 text-xs text-navy/60">
+              {agendaOk ? "Conectada · desayunos" : "Para agendar desayuno"}
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSoporteOpen((v) => !v)}
+            className="rounded-lg border border-border bg-cream p-3 text-left hover:border-navy/35"
+          >
+            <div className="text-sm font-semibold">Soporte</div>
+            <div className="mt-1 text-xs text-navy/60">
+              {soporteOpen ? "Ocultar · Llamada IA" : "Llamada IA (piloto)"}
+            </div>
+          </button>
+        </div>
+
+        {soporteOpen && (
+          <div className="mt-2 rounded-lg border border-gold/40 bg-[#f8f1de] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold">Llamada IA · piloto</div>
+                <p className="m-0 mt-0.5 text-xs text-navy/65">
+                  Guion ~90 s · sin telefonía real · solo simulación DEMO
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCallOpen(true)}
+                className="min-h-10 rounded-lg bg-navy px-3 text-xs font-medium text-white"
+              >
+                Abrir guion
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Listos para desayuno — warm only */}
+        {!compact && (
+          <div className="mt-3 rounded-lg border border-ok/25 bg-[#f3faf6] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="m-0 text-sm font-semibold">
+                  Listos para desayuno
+                </h3>
+                <p className="m-0 mt-0.5 text-xs text-navy/55">
+                  Solo leads calientes · no es visita genérica de campus
+                </p>
+              </div>
+            </div>
+            <ul className="mt-2 flex flex-col gap-2">
+              {SEMANA_MERCADO.listosDesayuno.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/80 bg-cream-card px-3 py-2"
+                >
+                  <div>
+                    <div className="text-sm font-medium">{d.nombre}</div>
+                    <div className="text-[11px] text-navy/55">
+                      {d.sede} · {d.programa}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (onAgendarDesayuno) onAgendarDesayuno(d.tareaId);
+                      else
+                        toast(
+                          "Usa «Agendar» en la tarea de desayuno de la cola",
+                          "ok"
+                        );
+                    }}
+                    className="min-h-10 rounded-lg border border-ok/40 bg-[#e8f5ee] px-3 text-xs font-semibold text-ok disabled:opacity-50"
+                  >
+                    Agendar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       <Modal
@@ -233,8 +252,8 @@ export function CanalesPanel({
         }
       >
         <p className="m-0 text-sm text-navy/70">
-          No hay auto-envío a LinkedIn. Los agentes preparan borradores de
-          conexión / InMail; Mercadeo copia y pega tras aprobar.
+          No hay envío automático. Los agentes preparan borradores; tú copias y
+          pegas tras aprobar.
         </p>
         <div className="mt-3 flex flex-col gap-3">
           {LINKEDIN_DRAFTS.map((d) => (
@@ -274,7 +293,7 @@ export function CanalesPanel({
       <Modal
         open={callOpen}
         onClose={() => setCallOpen(false)}
-        title="Llamada IA · piloto"
+        title="Llamada IA · soporte / piloto"
         size="md"
         footer={
           <button
@@ -288,15 +307,15 @@ export function CanalesPanel({
       >
         <div className="mb-3 flex flex-wrap gap-2">
           <span className="rounded-full border border-gold/50 bg-[#f8f1de] px-2.5 py-0.5 text-[10px] font-bold uppercase text-warn">
-            Piloto
+            Soporte
           </span>
           <span className="rounded-full border border-border bg-cream px-2.5 py-0.5 text-[10px] font-medium text-navy/60">
             Sin telefonía real
           </span>
         </div>
         <p className="m-0 text-sm text-navy/70">
-          Guion de voz ~90 s. En demo, «Simular llamada» registra actividad y un
-          resultado sin llamar a ningún carrier.
+          Guion de voz ~90 s. En demo, «Simular llamada» registra actividad sin
+          llamar a ningún carrier.
         </p>
         <pre
           className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-cream p-3 text-[12px] leading-relaxed"
@@ -309,7 +328,7 @@ export function CanalesPanel({
         </p>
         <div className="flex flex-wrap gap-2">
           {[
-            { id: "agendo", label: "Agendó visita" },
+            { id: "agendo", label: "Agendó desayuno" },
             { id: "callback", label: "Callback" },
             { id: "no_contesta", label: "No contesta" },
           ].map((r) => (
@@ -323,115 +342,6 @@ export function CanalesPanel({
               {r.label}
             </button>
           ))}
-        </div>
-      </Modal>
-
-      <Modal
-        open={visitaOpen}
-        onClose={() => setVisitaOpen(false)}
-        title="Visita campus · cupos sábados"
-        size="sm"
-        footer={
-          <button
-            type="button"
-            className="min-h-11 rounded-lg bg-navy px-4 text-sm font-medium text-white"
-            onClick={() => setVisitaOpen(false)}
-          >
-            Cerrar
-          </button>
-        }
-      >
-        <p className="m-0 text-sm text-navy/70">
-          Agenda plantilla 2 h en Chía. Próximos sábados abiertos — fechas con{" "}
-          <span className="confirm-tag">[CONFIRMAR]</span> hasta validar con
-          Dirección.
-        </p>
-        <div className="mt-3 flex flex-col gap-2">
-          {VISITA_SLOTS.map((s) => (
-            <div
-              key={s.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-cream p-3"
-            >
-              <div>
-                <div
-                  className="text-sm font-medium"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightConfirm(s.label),
-                  }}
-                />
-                <div className="text-xs text-navy/55">{s.cupos}</div>
-              </div>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => confirmarSlot(s.label)}
-                className="min-h-11 rounded-lg border border-ok/40 bg-[#e8f5ee] px-3 text-xs font-semibold text-ok disabled:opacity-50"
-              >
-                CONFIRMAR
-              </button>
-            </div>
-          ))}
-        </div>
-      </Modal>
-
-      <Modal
-        open={regionOpen}
-        onClose={() => setRegionOpen(false)}
-        title="Región · convenios territoriales"
-        size="md"
-        footer={
-          <button
-            type="button"
-            className="min-h-11 rounded-lg bg-navy px-4 text-sm font-medium text-white"
-            onClick={() => setRegionOpen(false)}
-          >
-            Entendido
-          </button>
-        }
-      >
-        <div className="mb-3 flex flex-wrap gap-2">
-          <span className="rounded-full border border-gold/50 bg-[#f8f1de] px-2.5 py-0.5 text-[10px] font-bold uppercase text-warn">
-            Piloto
-          </span>
-          <span className="rounded-full border border-border bg-cream px-2.5 py-0.5 text-[10px] font-medium text-navy/60">
-            Agente Región
-          </span>
-        </div>
-        <p className="m-0 text-sm text-navy/70">
-          Convenios con alcaldías, secretarías de educación y gobernaciones para
-          que la entidad territorial financie maestrías de docentes en la región
-          (cohortes regionales).
-        </p>
-        <div className="mt-3 rounded-lg border border-border bg-cream p-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-navy/50">
-            Carta a Secretaría
-          </div>
-          <div className="mt-1 text-sm font-semibold">
-            {REGION_CARTA.destinatario}
-          </div>
-          <div className="mt-1 text-xs text-navy/60">
-            Asunto: {REGION_CARTA.asunto}
-          </div>
-          <pre
-            className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-[12px] leading-relaxed text-navy/80"
-            dangerouslySetInnerHTML={{
-              __html: highlightConfirm(REGION_CARTA.cuerpo),
-            }}
-          />
-          <button
-            type="button"
-            className="mt-2 text-xs underline text-navy/60 hover:text-navy"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(REGION_CARTA.cuerpo);
-                toast("Carta copiada (DEMO)", "ok");
-              } catch {
-                toast("No se pudo copiar", "warn");
-              }
-            }}
-          >
-            Copiar carta
-          </button>
         </div>
       </Modal>
     </>

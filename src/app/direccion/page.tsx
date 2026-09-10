@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSessionRol, personaForRol } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 import { getMetricas } from "@/lib/db";
 import { FUNNEL_EJEMPLO } from "@/lib/seed-data";
 import { AppShell } from "@/components/AppShell";
@@ -8,14 +8,13 @@ import { DireccionClient } from "@/components/DireccionClient";
 export const dynamic = "force-dynamic";
 
 export default async function DireccionPage() {
-  const rol = await getSessionRol();
-  if (!rol) redirect("/");
-  const persona = personaForRol(rol);
+  const session = await getSessionUser();
+  if (!session) redirect("/");
 
   const metrica = await getMetricas();
 
   return (
-    <AppShell rol={rol} userName={persona.nombre} rolLabel={persona.rolLabel}>
+    <AppShell rol={session.rol} userName={session.displayName} rolLabel={session.rolLabel}>
       <DireccionClient
         metrica={metrica as Record<string, unknown> | null}
         funnel={FUNNEL_EJEMPLO}

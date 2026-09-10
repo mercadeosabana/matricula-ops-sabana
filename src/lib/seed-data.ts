@@ -1,9 +1,11 @@
 /** Seed data aligned with semana-ejemplo.md + dashboard-direccion.md + demo canales */
 
+/** Contraseña demo de todas: sabana2027 (ver docs/CORREO-INSTRUCCIONES.md) */
 export const USERS = [
   {
     id: "u-mercadeo",
     nombre: "Laura Natalia",
+    displayName: "Laura Natalia",
     email: "laura.natalia@unisabana.edu.co",
     rol: "mercadeo" as const,
     activo: 1,
@@ -12,7 +14,17 @@ export const USERS = [
   {
     id: "u-direccion",
     nombre: "Laura Lucía",
+    displayName: "Laura Lucía",
     email: "laura.lucia@unisabana.edu.co",
+    rol: "direccion" as const,
+    activo: 1,
+    createdAt: "2026-09-01T08:00:00-05:00",
+  },
+  {
+    id: "u-ivan",
+    nombre: "Ivan Auli",
+    displayName: "Ivan Auli",
+    email: "ivan.auli@unisabana.edu.co",
     rol: "direccion" as const,
     activo: 1,
     createdAt: "2026-09-01T08:00:00-05:00",
@@ -355,6 +367,7 @@ export const TAREAS = [
     orden: 1,
     tipo: "email_frio",
     canal: "email",
+    audiencia: "financiador",
     titulo: "Email frío — colegios Bogotá norte",
     programaFoco: "Maestría en Educación",
     dest: "Rectoría / Coordinación — Colegio San Viator (Usaquén)",
@@ -374,6 +387,7 @@ export const TAREAS = [
     orden: 2,
     tipo: "wa_followup",
     canal: "whatsapp",
+    audiencia: "estudiante",
     titulo: "WhatsApp — follow-up colegio Cajicá",
     programaFoco: "Pedagogía",
     dest: "Coordinadora académica — Colegio Gimnasio Vermont (Cajicá)",
@@ -392,6 +406,7 @@ export const TAREAS = [
     orden: 3,
     tipo: "llamada",
     canal: "telefono",
+    audiencia: "estudiante",
     titulo: "Llamada IA — warm lead Vermont (piloto)",
     programaFoco: "Pedagogía",
     dest: "Coordinadora académica — Colegio Gimnasio Vermont",
@@ -410,6 +425,7 @@ export const TAREAS = [
     orden: 4,
     tipo: "linkedin_borrador",
     canal: "linkedin",
+    audiencia: "financiador",
     titulo: "LinkedIn — borrador conexión / InMail a rectores",
     programaFoco: "Maestría en Educación",
     dest: "Rectoría — Colegio San Viator / Nueva Granada / Marymount",
@@ -428,13 +444,14 @@ export const TAREAS = [
     orden: 5,
     tipo: "invitacion_visita",
     canal: "visita",
-    titulo: "Reunión / visita campus — Agendar en Outlook",
+    audiencia: "estudiante",
+    titulo: "Invitación a desayuno — leads calientes",
     programaFoco: "Todos (4 maestrías)",
     dest: "Dirección Nueva Granada · direccion@nuevagranada.ejemplo.edu.co",
     asunto:
-      "Invitación — Visita campus Chía · Maestrías Facultad de Educación",
+      "Invitación a desayuno · Maestrías Facultad de Educación · Unisabana",
     cuerpo:
-      "Estimada/o [Nombre],\n\nLo/la esperamos en el campus Unisabana (Chía) para una visita de 2 horas.\n\n📍 Campus Unisabana, Chía\n🗓️ Próximos cupos abiertos:\n   · [CONFIRMAR: sábado 20 de septiembre de 2026] · 9:00–11:00\n   · [CONFIRMAR: sábado 27 de septiembre de 2026] · 9:00–11:00\n   · [CONFIRMAR: sábado 4 de octubre de 2026] · 9:00–11:00\n\nAGENDA\n09:00–09:20  Bienvenida\n09:20–09:50  Programas\n09:50–10:20  Admisiones y early bird [CONFIRMAR: 15% hasta 15 oct]\n10:20–10:45  Recorrido campus\n10:45–11:00  Preguntas e inscripción\n\nInversión referencial: [CONFIRMAR: $28.5M–$29.2M].",
+      "Estimada/o [Nombre],\n\nLo/la esperamos a un desayuno de trabajo en campus Unisabana (Chía) — 2 horas, solo leads calientes.\n\n📍 Campus Unisabana, Chía\n🗓️ Próximos cupos abiertos:\n   · [CONFIRMAR: sábado 20 de septiembre de 2026] · 9:00–11:00\n   · [CONFIRMAR: sábado 27 de septiembre de 2026] · 9:00–11:00\n   · [CONFIRMAR: sábado 4 de octubre de 2026] · 9:00–11:00\n\nAGENDA\n09:00–09:20  Bienvenida\n09:20–09:50  Programas\n09:50–10:20  Admisiones y early bird [CONFIRMAR: 15% hasta 15 oct]\n10:20–10:45  Recorrido campus\n10:45–11:00  Preguntas e inscripción\n\nInversión referencial: [CONFIRMAR: $28.5M–$29.2M].",
     estado: "pendiente",
     creadoPorAgente: "Agente Admisiones",
     aprobadaPorUserId: null,
@@ -447,6 +464,7 @@ export const TAREAS = [
     orden: 6,
     tipo: "email_segmento",
     canal: "email",
+    audiencia: "financiador",
     titulo: "Email — líderes académicos Chía / Cajicá",
     programaFoco: "Dirección y Gestión Educativa",
     dest: "Dirección — Colegio Nueva Granada / Los Nogales",
@@ -466,6 +484,7 @@ export const TAREAS = [
     orden: 7,
     tipo: "secuencia_d",
     canal: "whatsapp",
+    audiencia: "estudiante",
     titulo: "Secuencia follow-up D+3 / D+7 / D+14",
     programaFoco: "Según lead",
     dest: "Leads sin avance post-contacto o visita",
@@ -484,6 +503,7 @@ export const TAREAS = [
     orden: 8,
     tipo: "wa_programa",
     canal: "whatsapp",
+    audiencia: "estudiante",
     titulo: "WhatsApp — Desarrollo Infantil (preescolar fuerte)",
     programaFoco: "Desarrollo Infantil",
     dest: "Coordinación preescolar — Marymount / San Jorge de Inglaterra",
@@ -502,9 +522,10 @@ export const TAREAS = [
     orden: 9,
     tipo: "carta_secretaria",
     canal: "region",
-    titulo: "Región — carta a Secretaría de Educación (convenio)",
+    audiencia: "financiador",
+    titulo: "Financiador — carta Secretaría Educación Huila (Neiva)",
     programaFoco: "Cohortes regionales · 4 maestrías",
-    dest: "Secretaría de Educación · [CONFIRMAR: municipio / departamento]",
+    dest: "Secretaría de Educación del Huila · Neiva",
     asunto:
       "Convenio territorial · Maestrías Facultad de Educación · Unisabana",
     cuerpo:
@@ -578,7 +599,7 @@ export const ACTIVIDAD_SEED = [
     id: "a8",
     time: "07:30",
     actor: "Agente Región",
-    text: "Preparó tarea #9 · carta convenio a Secretaría de Educación.",
+    text: "Preparó tarea #9 · carta financiador Secretaría Huila (Neiva 12/20 equilibrio).",
     kind: "agente",
     createdAt: "2026-09-10T07:30:00-05:00",
   },
@@ -594,7 +615,7 @@ export const METRICA = {
   matriculas: 6,
   ingresoProyectadoCop: 165000000,
   notasAgente:
-    "Embudo EJEMPLO 420→6 · meta 40 · gap ~$550–605M · semáforo amarillo",
+    "Semana mercado Neiva 12/20 cupos financiados · embudo 420→6 · meta 40 · semáforo amarillo",
 };
 
 export const FUNNEL_EJEMPLO = [

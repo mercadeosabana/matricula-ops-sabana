@@ -8,6 +8,9 @@ import {
   TAREAS,
   USERS,
 } from "./seed-data";
+import { audienciaDeTarea } from "./market-story";
+import { hashDemoPassword, hashPassword } from "./passwords";
+import { randomUUID } from "crypto";
 import type {
   ActividadItem,
   AgendaEvent,
@@ -127,14 +130,19 @@ function parseJsonArray(value: string | string[]): string[] {
 
 function seedStore(): Store {
   return {
-    users: USERS.map((u) => ({
-      id: u.id,
-      nombre: u.nombre,
-      email: u.email,
-      rol: u.rol,
-      activo: Boolean(u.activo),
-      createdAt: u.createdAt,
-    })),
+    users: USERS.map((u) => {
+      const row = u as typeof u & { displayName?: string };
+      return {
+        id: u.id,
+        nombre: u.nombre,
+        displayName: row.displayName || u.nombre,
+        email: u.email.toLowerCase(),
+        rol: u.rol,
+        activo: Boolean(u.activo),
+        passwordHash: hashDemoPassword(),
+        createdAt: u.createdAt,
+      };
+    }),
     colegios: COLEGIOS.map((c) => ({
       id: c.id,
       nombre: c.nombre,
@@ -145,23 +153,31 @@ function seedStore(): Store {
       ultimoContactoAt: c.ultimoContactoAt,
     })),
     leads: LEADS.map((l) => mapLeadFromSeed(l)),
-    tareas: TAREAS.map((t) => ({
-      id: t.id,
-      fecha: t.fecha,
-      orden: t.orden,
-      tipo: t.tipo as TareaHoy["tipo"],
-      canal: t.canal as TareaHoy["canal"],
-      titulo: t.titulo,
-      programaFoco: t.programaFoco,
-      dest: t.dest,
-      asunto: t.asunto,
-      cuerpo: t.cuerpo,
-      estado: t.estado as TareaHoy["estado"],
-      creadoPorAgente: t.creadoPorAgente,
-      aprobadaPorUserId: t.aprobadaPorUserId,
-      enviadaAt: t.enviadaAt,
-      acciones: parseJsonArray(t.acciones),
-    })),
+    tareas: TAREAS.map((t) => {
+      const row = t as typeof t & { audiencia?: TareaHoy["audiencia"] };
+      return {
+        id: t.id,
+        fecha: t.fecha,
+        orden: t.orden,
+        tipo: t.tipo as TareaHoy["tipo"],
+        canal: t.canal as TareaHoy["canal"],
+        titulo: t.titulo,
+        programaFoco: t.programaFoco,
+        dest: t.dest,
+        asunto: t.asunto,
+        cuerpo: t.cuerpo,
+        estado: t.estado as TareaHoy["estado"],
+        creadoPorAgente: t.creadoPorAgente,
+        aprobadaPorUserId: t.aprobadaPorUserId,
+        enviadaAt: t.enviadaAt,
+        acciones: parseJsonArray(t.acciones),
+        audiencia: audienciaDeTarea({
+          audiencia: row.audiencia,
+          canal: t.canal,
+          tipo: t.tipo,
+        }),
+      };
+    }),
     envios: [],
     actividad: ACTIVIDAD_SEED.map((a) => ({
       id: a.id,
@@ -207,18 +223,51 @@ function loadStore(): Store {
         Array.isArray(parsed.metricas)
       ) {
         // Keep persona names in sync with seed
+        // audiencia backfill for older store.json
+        if (Array.isArray(parsed.tareas)) {
+          parsed.tareas = parsed.tareas.map((t) => ({
+            ...t,
+            audiencia: audienciaDeTarea(t),
+          }));
+        }
         if (Array.isArray(parsed.users)) {
           const byId = new Map(USERS.map((u) => [u.id, u]));
           parsed.users = parsed.users.map((u) => {
             const seed = byId.get(u.id);
-            if (!seed) return u;
-            return {
+            const base = {
               ...u,
-              nombre: seed.nombre,
-              email: seed.email,
-              rol: seed.rol,
+              displayName: u.displayName || u.nombre,
+              email: (u.email || "").toLowerCase(),
+              activo: u.activo !== false,
+              passwordHash: u.passwordHash || hashDemoPassword(),
             };
+            if (!seed) return base as User;
+            return {
+              ...base,
+              // keep displayName if customized; sync email/rol from seed personas
+              nombre: u.nombre || seed.nombre,
+              displayName: u.displayName || u.nombre || seed.nombre,
+              email: (u.email || seed.email).toLowerCase(),
+              rol: seed.rol,
+              passwordHash: u.passwordHash || hashDemoPassword(),
+            } as User;
           });
+          // Ensure seed personas exist
+          for (const seed of USERS) {
+            if (!parsed.users.some((u) => u.id === seed.id)) {
+              const row = seed as typeof seed & { displayName?: string };
+              parsed.users.push({
+                id: seed.id,
+                nombre: seed.nombre,
+                displayName: row.displayName || seed.nombre,
+                email: seed.email.toLowerCase(),
+                rol: seed.rol,
+                activo: Boolean(seed.activo),
+                passwordHash: hashDemoPassword(),
+                createdAt: seed.createdAt,
+              });
+            }
+          }
         }
         // Refresh colegios/leads from seed when demo CRM expanded
         if (
@@ -499,4 +548,118 @@ export function bogotaNow() {
 
 export function hasUnresolvedConfirm(text: string) {
   return /\[CONFIRMAR:[^\]]*\]/.test(text || "");
+}
+
+export function publicUser(u: User) {
+  return {
+    id: u.id,
+    nombre: u.nombre,
+    displayName: u.displayName || u.nombre,
+    email: u.email,
+    rol: u.rol,
+    activo: u.activo,
+    createdAt: u.createdAt,
+  };
+}
+
+export async function listUsers(): Promise<ReturnType<typeof publicUser>[]> {
+  const store = loadStore();
+  return store.users.map(publicUser);
+}
+
+export async function findUserById(id: string): Promise<User | null> {
+  const store = loadStore();
+  return store.users.find((u) => u.id === id) ?? null;
+}
+
+export async function findUserByEmail(email: string): Promise<User | null> {
+  const store = loadStore();
+  const e = email.trim().toLowerCase();
+  return store.users.find((u) => u.email.toLowerCase() === e) ?? null;
+}
+
+export async function createUser(input: {
+  nombre: string;
+  email: string;
+  rol: User["rol"];
+  tempPassword: string;
+}): Promise<ReturnType<typeof publicUser> | { error: string }> {
+  const store = loadStore();
+  const email = input.email.trim().toLowerCase();
+  if (!input.nombre.trim() || !email || !input.tempPassword) {
+    return { error: "Nombre, correo y contraseña temporal son obligatorios" };
+  }
+  if (store.users.some((u) => u.email.toLowerCase() === email)) {
+    return { error: "Ya existe un usuario con ese correo" };
+  }
+  const user: User = {
+    id: `u-${randomUUID().slice(0, 8)}`,
+    nombre: input.nombre.trim(),
+    displayName: input.nombre.trim(),
+    email,
+    rol: input.rol,
+    activo: true,
+    passwordHash: hashPassword(input.tempPassword),
+    createdAt: new Date().toISOString(),
+  };
+  store.users.push(user);
+  saveStore(store);
+  return publicUser(user);
+}
+
+export async function setUserActive(
+  id: string,
+  activo: boolean
+): Promise<ReturnType<typeof publicUser> | null> {
+  const store = loadStore();
+  const idx = store.users.findIndex((u) => u.id === id);
+  if (idx < 0) return null;
+  store.users[idx] = { ...store.users[idx], activo };
+  saveStore(store);
+  return publicUser(store.users[idx]);
+}
+
+export async function resetUserPassword(
+  id: string,
+  tempPassword: string
+): Promise<ReturnType<typeof publicUser> | null> {
+  const store = loadStore();
+  const idx = store.users.findIndex((u) => u.id === id);
+  if (idx < 0) return null;
+  store.users[idx] = {
+    ...store.users[idx],
+    passwordHash: hashPassword(tempPassword),
+  };
+  saveStore(store);
+  return publicUser(store.users[idx]);
+}
+
+/** Pasa leads pendientes (owner) de un mercadeo a otro. No toca historial de actividad. */
+export async function reassignPendingOwnership(opts: {
+  fromUserId: string;
+  toUserId: string;
+}): Promise<{ leadsMoved: number; fromName: string; toName: string }> {
+  const store = loadStore();
+  const from = store.users.find((u) => u.id === opts.fromUserId);
+  const to = store.users.find((u) => u.id === opts.toUserId);
+  if (!from || !to) {
+    return { leadsMoved: 0, fromName: "", toName: "" };
+  }
+  const fromNames = new Set(
+    [from.nombre, from.displayName].filter(Boolean).map((s) => s.trim())
+  );
+  let leadsMoved = 0;
+  store.leads = store.leads.map((l) => {
+    if (fromNames.has((l.owner || "").trim())) {
+      leadsMoved += 1;
+      return { ...l, owner: to.displayName || to.nombre };
+    }
+    return l;
+  });
+  saveStore(store);
+  return {
+    leadsMoved,
+    fromName: from.displayName || from.nombre,
+    toName: to.displayName || to.nombre,
+  };
 }

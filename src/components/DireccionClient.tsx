@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CANAL_FUNNEL_POTENCIAL, readDemoClient } from "@/lib/demo";
 import { CanalesPanel } from "./CanalesPanel";
-import { COSTOS_EJEMPLO } from "@/lib/admissions-data";
+import {
+  PORTFOLIO_GERENCIA,
+  PROGRAMAS_GERENCIA,
+  SEMANA_MERCADO,
+  TORTA_MERCADO,
+  equilibrioMetido,
+  formatMillones,
+  paceDePrograma,
+} from "@/lib/market-story";
 import {
   AgendaConnectModal,
   OutlookConnectModal,
@@ -53,79 +61,366 @@ export function DireccionClient({
     setDemoMode(readDemoClient());
   }, []);
 
-  const kpis = [
-    {
-      label: "Colegios contactados",
-      value: Number(metrica?.colegiosContactados ?? 86),
-      hint: "EJEMPLO · mix Bogotá N / Chía–Cajicá",
-      delta: "↑ 12% vs sem. ant.",
-      up: true,
-    },
-    {
-      label: "Respuestas",
-      value: Number(metrica?.respuestas ?? 126),
-      hint: "EJEMPLO · interés calificado",
-      delta: "↑ 8% vs sem. ant.",
-      up: true,
-    },
-    {
-      label: "Visitas",
-      value: Number(metrica?.visitasRealizadas ?? 36),
-      hint: "EJEMPLO · realizadas (de 48 agendadas)",
-      delta: "↑ 15% vs sem. ant.",
-      up: true,
-    },
-    {
-      label: "Inscritos / apps",
-      value: Number(metrica?.inscritos ?? 14),
-      hint: "EJEMPLO · aplicaciones enviadas",
-      delta: "↑ 2 vs sem. ant.",
-      up: true,
-    },
-    {
-      label: "Matrículas",
-      value: Number(metrica?.matriculas ?? 6),
-      hint: "EJEMPLO · meta cohorte 40",
-      delta: "Gap: 34 cupos",
-      up: false,
-    },
-  ];
-
-  const maxFunnel = funnel[0]?.valor || 420;
-  const progressPct = Math.round(
-    (revenue.pagadoCop / revenue.metaCop) * 100
+  const pf = PORTFOLIO_GERENCIA;
+  const eq = equilibrioMetido(pf.cuposFinanciados, pf.cuposEquilibrio);
+  const pctInscritos = Math.round(
+    (pf.realInscritosTotal / Math.max(1, pf.metaInscritosTotal)) * 100
   );
+  const pctSpend = Math.round((pf.spendCop / Math.max(1, pf.presupuestoCop)) * 100);
+  const pctHoras = Math.round((pf.horasEquipo / Math.max(1, pf.horasPresupuesto)) * 100);
+  const portfolioPace =
+    pctInscritos >= 70 ? "ok" : pctInscritos >= 40 ? "atrasado" : "critico";
+
+  const tortaTotal = TORTA_MERCADO.segmentos.reduce((s, x) => s + x.n, 0);
+  const maxEst = Math.max(
+    ...TORTA_MERCADO.embudoEstudiantes.map((e) => e.valor),
+    1
+  );
+  const maxFin = Math.max(
+    ...TORTA_MERCADO.embudoFinanciadores.map((e) => e.valor),
+    1
+  );
+  const maxFunnel = funnel[0]?.valor || 420;
+  const progressPct = Math.round((revenue.pagadoCop / revenue.metaCop) * 100);
 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="m-0 text-2xl font-bold">Dashboard Dirección</h1>
+          <h1 className="m-0 text-2xl font-bold">Dirección · panorama</h1>
           <p className="mt-1 text-sm text-navy/65">
-            Últimos 30 días · Cohorte 2027-1 · Todos los números son{" "}
-            <strong>EJEMPLO</strong>
+            Cohorte {pf.nota.includes("2027-1") ? "2027-1" : ""} · números{" "}
+            <strong>EJEMPLO</strong> · escaneo en 5 segundos
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-warn/30 bg-[#f5e6c8] px-3 py-1 text-xs font-medium text-warn">
-            Semáforo: Amarillo
-          </span>
+          <Semaforo
+            tone={portfolioPace === "ok" ? "ok" : portfolioPace === "atrasado" ? "warn" : "crit"}
+            label={
+              portfolioPace === "ok"
+                ? "Portfolio al día"
+                : portfolioPace === "atrasado"
+                  ? "Portfolio atrasado"
+                  : "Portfolio crítico"
+            }
+          />
           <span className="rounded-full border border-border bg-cream-card px-3 py-1 text-xs font-medium">
-            Early bird → 15 oct (CONFIRMAR)
+            Semana mercado · {SEMANA_MERCADO.sedeFoco}
           </span>
+          <Link
+            href="/equipo"
+            className="rounded-full border border-navy/20 bg-cream-card px-3 py-1 text-xs font-medium underline"
+          >
+            Equipo →
+          </Link>
         </div>
       </div>
 
+      {/* Hero portfolio numbers */}
+      <section className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <BigStat
+          label="Inscritos / meta"
+          value={`${pf.realInscritosTotal}/${pf.metaInscritosTotal}`}
+          hint={`${pctInscritos}% · faltan ${pf.metaInscritosTotal - pf.realInscritosTotal}`}
+          tone={portfolioPace === "ok" ? "ok" : "warn"}
+        />
+        <BigStat
+          label="Dinero invertido"
+          value={formatMillones(pf.spendCop)}
+          hint={`${pctSpend}% de presupuesto ${formatMillones(pf.presupuestoCop)}`}
+          tone={pctSpend > 85 ? "warn" : "ok"}
+        />
+        <BigStat
+          label="Tiempo equipo"
+          value={`${pf.horasEquipo} h`}
+          hint={`Desde ${pf.campanaInicioLabel} · ${pf.semanasCampana} sem · tope ${pf.horasPresupuesto} h (${pctHoras}%)`}
+          tone="neutral"
+        />
+        <BigStat
+          label="Cupos financiados"
+          value={`${pf.cuposFinanciados}/${pf.cuposEquilibrio}`}
+          hint={
+            eq.met
+              ? "Equilibrio OK · buscar interesados"
+              : `Faltan ${eq.faltan} para equilibrio (Neiva)`
+          }
+          tone={eq.met ? "ok" : "warn"}
+        />
+      </section>
+
+      {/* Per program pace */}
+      <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="m-0 text-base font-semibold">Avance por programa</h2>
+            <p className="mt-1 text-xs text-navy/55">
+              Meta vs real · gap · ritmo (semanas restantes) · EJEMPLO
+            </p>
+          </div>
+          <Link href="/sala-guerra" className="text-xs underline text-navy/60">
+            Sala de guerra →
+          </Link>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {PROGRAMAS_GERENCIA.map((p) => {
+            const pace = paceDePrograma(p);
+            return (
+              <div
+                key={p.programa}
+                className="rounded-lg border border-border bg-cream p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="font-semibold text-sm">{p.programa}</div>
+                  <Semaforo
+                    tone={
+                      pace.pace === "ok"
+                        ? "ok"
+                        : pace.pace === "atrasado"
+                          ? "warn"
+                          : "crit"
+                    }
+                    label={pace.paceLabel}
+                  />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl font-bold leading-none">
+                    {p.realInscritos}
+                  </span>
+                  <span className="text-sm text-navy/55">
+                    / {p.metaInscritos} meta · {pace.pctAvance}%
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className={`h-full rounded-full ${
+                      pace.pace === "ok"
+                        ? "bg-ok"
+                        : pace.pace === "atrasado"
+                          ? "bg-gold"
+                          : "bg-[#9b2c2c]"
+                    }`}
+                    style={{ width: `${Math.min(100, pace.pctAvance)}%` }}
+                  />
+                </div>
+                <p className="mt-2 mb-0 text-xs text-navy/65">
+                  Faltan <strong>{pace.faltan}</strong> · {p.semanasRestantes}{" "}
+                  sem restantes · ritmo actual {p.ritmoActualPorSemana}/sem
+                  (necesita ~{p.ritmoNecesarioPorSemana}) · proyección{" "}
+                  {pace.proyeccion}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Costs row */}
+      <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
+        <h2 className="m-0 text-base font-semibold">
+          Costos · CAC / visita / matrícula
+        </h2>
+        <p className="mt-1 text-xs text-navy/55">{pf.nota}</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg bg-cream p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
+              CAC EJEMPLO
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              {formatMillones(pf.cacCop)}
+            </div>
+            <div className="text-xs text-navy/55">COP / matrícula</div>
+          </div>
+          <div className="rounded-lg bg-cream p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
+              Costo por visita / desayuno
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              ~{formatMillones(pf.costoPorVisitaCop)}
+            </div>
+          </div>
+          <div className="rounded-lg bg-cream p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
+              Costo por matrícula
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              {formatMillones(pf.costoPorMatriculaCop)}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Gran torta */}
+      <section className="mb-4 rounded-[12px] border border-navy/15 bg-navy px-4 py-4 text-white">
+        <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
+          Historia de mercado
+        </div>
+        <h2 className="m-0 mt-1 text-xl font-bold">{TORTA_MERCADO.titulo}</h2>
+        <p className="m-0 mt-1 text-sm text-white/75">{TORTA_MERCADO.nota}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {TORTA_MERCADO.segmentos.map((s) => (
+            <div key={s.id} className="rounded-lg bg-white/10 px-3 py-3">
+              <div className="text-[10px] uppercase tracking-wide text-white/55">
+                {s.rol === "financiador" ? "Financiador" : "Interesado"}
+              </div>
+              <div className="mt-1 text-2xl font-bold">
+                {s.n.toLocaleString("es-CO")}
+              </div>
+              <div className="text-xs text-white/70">{s.label}</div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/20">
+                <div
+                  className="h-full rounded-full bg-gold"
+                  style={{
+                    width: `${Math.max(8, (s.n / tortaTotal) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-2">
+        <section className="rounded-[10px] border border-border bg-cream-card p-4">
+          <h2 className="m-0 text-base font-semibold">Abordados de la torta</h2>
+          <p className="mt-1 text-xs text-navy/55">
+            Qué % / N ya se tocó · por segmento · EJEMPLO
+          </p>
+          <div className="mt-3 flex flex-col gap-3">
+            {TORTA_MERCADO.abordados.map((a) => (
+              <div key={a.segmento}>
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">{a.segmento}</span>
+                  <span>
+                    {a.tocados.toLocaleString("es-CO")} /{" "}
+                    {a.universo.toLocaleString("es-CO")}{" "}
+                    <span className="text-navy/50">({a.pct}%)</span>
+                  </span>
+                </div>
+                <div className="mt-1 h-2 overflow-hidden rounded-full bg-cream">
+                  <div
+                    className="h-full rounded-full bg-navy"
+                    style={{ width: `${Math.min(100, a.pct * 12)}%` }}
+                  />
+                </div>
+                <div className="mt-0.5 text-[11px] text-navy/50">{a.semana}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[10px] border border-border bg-cream-card p-4">
+          <h2 className="m-0 text-base font-semibold">Qué se hizo · toques</h2>
+          <p className="mt-1 text-xs text-navy/55">
+            Por canal · últimos 30 días · EJEMPLO
+          </p>
+          <ul className="mt-3 space-y-2">
+            {TORTA_MERCADO.toquesCanal.map((t) => (
+              <li
+                key={t.canal}
+                className="flex items-center justify-between rounded-lg bg-cream px-3 py-2 text-sm"
+              >
+                <span>{t.canal}</span>
+                <strong>{t.n}</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      {/* Dual funnels */}
+      <div className="mb-4 grid gap-4 lg:grid-cols-2">
+        <section className="rounded-[10px] border border-border bg-cream-card p-4">
+          <h2 className="m-0 text-base font-semibold">
+            1. Embudo financiadores
+          </h2>
+          <p className="mt-1 text-xs text-navy/55">
+            Contactados → negociación → cupos → equilibrio · primero
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            {TORTA_MERCADO.embudoFinanciadores.map((f) => (
+              <div
+                key={f.etapa}
+                className="grid grid-cols-[140px_1fr_40px] items-center gap-2 text-sm"
+              >
+                <span className={f.meta ? "font-semibold text-warn" : ""}>
+                  {f.etapa}
+                </span>
+                <div className="h-7 overflow-hidden rounded bg-cream">
+                  <div
+                    className="flex h-full items-center px-2 text-xs font-semibold text-white"
+                    style={{
+                      width: `${Math.max(8, (f.valor / maxFin) * 100)}%`,
+                      background: f.meta
+                        ? "linear-gradient(90deg,#c4a35a,#d4b86a)"
+                        : "var(--navy)",
+                      color: f.meta ? "#1a2b4a" : undefined,
+                    }}
+                  >
+                    {f.valor}
+                  </div>
+                </div>
+                <span className="text-right text-xs text-navy/50">
+                  {f.meta ? "meta" : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 mb-0 text-xs text-navy/60">
+            Hoy (rebanada): Neiva{" "}
+            <strong>
+              {SEMANA_MERCADO.cuposFinanciados}/{SEMANA_MERCADO.cuposEquilibrio}
+            </strong>{" "}
+            · ver{" "}
+            <Link href="/hoy" className="underline">
+              Hoy Mercadeo
+            </Link>
+          </p>
+        </section>
+
+        <section className="rounded-[10px] border border-border bg-cream-card p-4">
+          <h2 className="m-0 text-base font-semibold">
+            2. Embudo interesados
+          </h2>
+          <p className="mt-1 text-xs text-navy/55">
+            Contactados → respondieron → desayuno → post-visita → matrícula
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            {TORTA_MERCADO.embudoEstudiantes.map((f) => (
+              <div
+                key={f.etapa}
+                className="grid grid-cols-[130px_1fr_36px] items-center gap-2 text-sm"
+              >
+                <span>{f.etapa}</span>
+                <div className="h-7 overflow-hidden rounded bg-cream">
+                  <div
+                    className="flex h-full items-center px-2 text-xs font-semibold text-white"
+                    style={{
+                      width: `${Math.max(6, (f.valor / maxEst) * 100)}%`,
+                      background:
+                        f.etapa === "Matrícula"
+                          ? "linear-gradient(90deg,#c4a35a,#d4b86a)"
+                          : "var(--navy)",
+                      color: f.etapa === "Matrícula" ? "#1a2b4a" : undefined,
+                    }}
+                  >
+                    {f.valor}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
       <div className="mb-4 rounded-[10px] border border-border bg-[#eef2f8] px-4 py-3 text-sm leading-relaxed">
-        <strong>Tu rol:</strong> mirar embudo + $ vs meta, aprobar excepciones de
-        descuento y desbloquear fechas de visita. No redactas emails: eso vive
-        en{" "}
+        <strong>Tu rol:</strong> mirar equilibrio vs interesados, avance por
+        programa y $ vs presupuesto. La ejecución semanal vive en{" "}
         <Link href="/hoy" className="underline">
           Hoy
         </Link>
-        . Habla con los agentes en{" "}
-        <Link href="/agentes" className="underline">
-          Agentes
+        . Equipo y accesos en{" "}
+        <Link href="/equipo" className="underline">
+          Equipo
         </Link>
         .
       </div>
@@ -141,12 +436,8 @@ export function DireccionClient({
 
       <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
         <h2 className="m-0 text-base font-semibold">
-          Potencial del sistema · Cómo llenamos la cohorte
+          Potencial del sistema · canales
         </h2>
-        <p className="mt-1 text-xs text-navy/55">
-          Embudo por canal → visitas → matrículas · números{" "}
-          <strong>EJEMPLO</strong> · live vs piloto
-        </p>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[560px] border-collapse text-sm">
             <thead>
@@ -183,39 +474,7 @@ export function DireccionClient({
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-xs leading-relaxed text-navy/60">
-          <strong>Cohortes regionales (Región / Convenios):</strong> alcaldías,
-          secretarías y gobernaciones pueden financiar cupos de docentes en la
-          región — palanca EJEMPLO para cerrar el gap vs meta 40. Outlook/WA
-          requieren credenciales TI; <strong>Agenda Outlook</strong> usa
-          Calendars.ReadWrite (mismo OAuth) o modo DEMO; LinkedIn = borradores;
-          Llamada IA y Región = piloto.
-        </p>
       </section>
-
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {kpis.map((k) => (
-          <div
-            key={k.label}
-            className="rounded-[10px] border border-border bg-cream-card p-4"
-          >
-            <div className="text-xs font-medium uppercase tracking-wide text-navy/55">
-              {k.label}
-            </div>
-            <div className="mt-1 text-[32px] font-bold leading-none text-navy">
-              {k.value}
-            </div>
-            <div className="mt-2 text-[11px] text-navy/55">{k.hint}</div>
-            <div
-              className={`mt-1 text-xs font-semibold ${
-                k.up ? "text-ok" : "text-warn"
-              }`}
-            >
-              {k.delta}
-            </div>
-          </div>
-        ))}
-      </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {wow.map((w) => (
@@ -234,63 +493,19 @@ export function DireccionClient({
         ))}
       </div>
 
-      <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <h2 className="m-0 text-base font-semibold">
-              Costos · CAC / visita / matrícula
-            </h2>
-            <p className="mt-1 text-xs text-navy/55">{COSTOS_EJEMPLO.nota}</p>
-          </div>
-          <Link href="/sala-guerra" className="text-xs underline text-navy/60">
-            Sala de guerra →
-          </Link>
-        </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg bg-cream p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
-              CAC EJEMPLO
-            </div>
-            <div className="mt-1 text-2xl font-bold">
-              ${(COSTOS_EJEMPLO.cacCop / 1_000_000).toFixed(1)}M
-            </div>
-            <div className="text-xs text-navy/55">COP / matrícula</div>
-          </div>
-          <div className="rounded-lg bg-cream p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
-              Costo por visita
-            </div>
-            <div className="mt-1 text-2xl font-bold">
-              ~${(COSTOS_EJEMPLO.costoPorVisitaCop / 1_000_000).toFixed(1)}M
-            </div>
-            <div className="text-xs text-navy/55">
-              {COSTOS_EJEMPLO.visitasRealizadas} visitas
-            </div>
-          </div>
-          <div className="rounded-lg bg-cream p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
-              Costo por matrícula
-            </div>
-            <div className="mt-1 text-2xl font-bold">
-              ${(COSTOS_EJEMPLO.costoPorMatriculaCop / 1_000_000).toFixed(1)}M
-            </div>
-            <div className="text-xs text-navy/55">
-              {COSTOS_EJEMPLO.matriculas} matrículas · inv. $
-              {(COSTOS_EJEMPLO.inversionMercadeoCop / 1_000_000).toFixed(0)}M
-            </div>
-          </div>
-        </div>
-      </section>
-
       <div className="mb-4 grid gap-4 lg:grid-cols-2">
         <section className="rounded-[10px] border border-border bg-cream-card p-4">
-          <h2 className="m-0 text-base font-semibold">Embudo cohorte 2027-1</h2>
+          <h2 className="m-0 text-base font-semibold">Embudo cohorte (legado)</h2>
           <p className="mt-1 text-xs text-navy/55">
-            Volúmenes EJEMPLO · conversión vs etapa anterior
+            Volúmenes EJEMPLO · {Number(metrica?.colegiosContactados ?? 86)}{" "}
+            colegios contactados
           </p>
           <div className="mt-4 flex flex-col gap-2">
             {funnel.map((f) => (
-              <div key={f.etapa} className="grid grid-cols-[110px_1fr_56px] items-center gap-2 text-sm">
+              <div
+                key={f.etapa}
+                className="grid grid-cols-[110px_1fr_56px] items-center gap-2 text-sm"
+              >
                 <span className="text-navy/75">{f.etapa}</span>
                 <div className="h-7 overflow-hidden rounded bg-cream">
                   <div
@@ -318,7 +533,7 @@ export function DireccionClient({
         <section className="rounded-[10px] border border-border bg-cream-card p-4">
           <h2 className="m-0 text-base font-semibold">Ingresos vs meta</h2>
           <p className="mt-1 text-xs text-navy/55">
-            EJEMPLO · ticket {revenue.ticketPromedio} post-descuento
+            EJEMPLO · ticket {revenue.ticketPromedio}
           </p>
           <div className="mt-4 flex justify-between text-sm font-medium">
             <span>Pagado ~$165M</span>
@@ -330,21 +545,10 @@ export function DireccionClient({
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <p className="mt-3 text-sm font-semibold text-warn">
-            Amarillo — visitas OK; matrícula bajo plan
-          </p>
           <ul className="mt-3 space-y-2 text-sm">
             <li className="flex justify-between border-b border-border/60 py-1">
               <span>Matrículas pagadas ({revenue.matriculas})</span>
               <span>~$165M</span>
-            </li>
-            <li className="flex justify-between border-b border-border/60 py-1">
-              <span>Pipeline alta prob. (+6–7)</span>
-              <span>~$165–190M</span>
-            </li>
-            <li className="flex justify-between border-b border-border/60 py-1">
-              <span>Proyección early bird</span>
-              <span>{revenue.proyeccionEarlyBird}</span>
             </li>
             <li className="flex justify-between py-1 font-semibold">
               <span>Gap vs meta</span>
@@ -356,9 +560,6 @@ export function DireccionClient({
 
       <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
         <h2 className="m-0 text-base font-semibold">Mix por programa</h2>
-        <p className="mt-1 text-xs text-navy/55">
-          Matrículas + pipeline fuerte · EJEMPLO
-        </p>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[480px] border-collapse text-sm">
             <thead>
@@ -366,7 +567,7 @@ export function DireccionClient({
                 <th className="py-2 pr-2 font-semibold">Programa</th>
                 <th className="py-2 pr-2 font-semibold">Matrículas</th>
                 <th className="py-2 pr-2 font-semibold">Pipeline fuerte</th>
-                <th className="py-2 font-semibold">Prioridad agente</th>
+                <th className="py-2 font-semibold">Prioridad</th>
               </tr>
             </thead>
             <tbody>
@@ -385,21 +586,18 @@ export function DireccionClient({
 
       <section className="rounded-[10px] border border-border bg-cream-card p-4">
         <h2 className="m-0 text-base font-semibold">Estrategia 30 días</h2>
-        <p className="mt-1 text-xs text-navy/55">
-          Los agentes operan · Mercadeo aprueba · Dirección mira estos frentes
-        </p>
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed">
           {estrategia.map((s) => (
             <li key={s}>{s}</li>
           ))}
         </ol>
         <p className="mt-4 text-sm">
-          <Link href="/actividad" className="underline">
-            Ver log de actividad →
+          <Link href="/hoy" className="underline">
+            Abrir Hoy (semana de mercado)
           </Link>
           {" · "}
-          <Link href="/hoy" className="underline">
-            Abrir cola de Mercadeo (Hoy)
+          <Link href="/equipo" className="underline">
+            Equipo
           </Link>
           {" · "}
           <Link href="/agentes" className="underline">
@@ -427,5 +625,59 @@ export function DireccionClient({
         onChanged={refresh}
       />
     </>
+  );
+}
+
+function BigStat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone: "ok" | "warn" | "neutral";
+}) {
+  return (
+    <div
+      className={`rounded-[10px] border p-4 ${
+        tone === "ok"
+          ? "border-ok/30 bg-[#e8f5ee]"
+          : tone === "warn"
+            ? "border-warn/30 bg-[#f8f1de]"
+            : "border-border bg-cream-card"
+      }`}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/55">
+        {label}
+      </div>
+      <div className="mt-1 text-[28px] font-bold leading-none text-navy">
+        {value}
+      </div>
+      <div className="mt-2 text-[11px] leading-snug text-navy/60">{hint}</div>
+    </div>
+  );
+}
+
+function Semaforo({
+  tone,
+  label,
+}: {
+  tone: "ok" | "warn" | "crit";
+  label: string;
+}) {
+  const cls =
+    tone === "ok"
+      ? "border-ok/30 bg-[#e8f5ee] text-ok"
+      : tone === "warn"
+        ? "border-warn/30 bg-[#f5e6c8] text-warn"
+        : "border-[#9b2c2c]/40 bg-[#fdecea] text-[#9b2c2c]";
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-xs font-bold ${cls}`}
+    >
+      {label}
+    </span>
   );
 }

@@ -10,7 +10,7 @@ import {
   createAgendaEvent,
   findLeadEmailForDest,
 } from "@/lib/db";
-import { getSessionRol, userIdForRol, actorNameForRol } from "@/lib/auth";
+import { getSessionUser, getSessionRol, userIdForRol, actorNameForRol } from "@/lib/auth";
 import {
   getConnectionStatus,
   isOutlookCalendarConnected,
@@ -33,8 +33,9 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> }
 ) {
   const { id } = await ctx.params;
-  const rol = await getSessionRol();
-  if (!rol) {
+  const session = await getSessionUser();
+  const rol = session?.rol ?? (await getSessionRol());
+  if (!rol || !session) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
   const body = await req.json().catch(() => ({}));
@@ -45,8 +46,8 @@ export async function PATCH(
   }
 
   const { time, iso } = bogotaNow();
-  const actor = actorNameForRol(rol);
-  const userId = userIdForRol(rol);
+  const actor = session.displayName || actorNameForRol(rol);
+  const userId = session.id || userIdForRol(rol);
 
   if (action === "aprobar") {
     const updated = await updateTarea(id, {

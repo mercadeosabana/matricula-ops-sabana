@@ -139,6 +139,9 @@ export function AppShell({
               <NavLink href="/direccion" active={pathname === "/direccion"}>
                 Dashboard
               </NavLink>
+              <NavLink href="/equipo" active={pathname === "/equipo"}>
+                Equipo
+              </NavLink>
               <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
                 Sala de guerra
               </NavLink>

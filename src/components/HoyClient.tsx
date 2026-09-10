@@ -6,6 +6,11 @@ import type { ActividadItem, TareaHoy } from "@/lib/types";
 import { CANAL_LABEL, ESTADO_LABEL } from "@/lib/types";
 import { highlightConfirm, hasUnresolvedConfirm } from "@/lib/utils";
 import { readDemoClient, setDemoCookie } from "@/lib/demo";
+import {
+  SEMANA_MERCADO,
+  audienciaDeTarea,
+  equilibrioMetido,
+} from "@/lib/market-story";
 import { Modal } from "./Modal";
 import { toast } from "./Toast";
 import Link from "next/link";
@@ -20,15 +25,6 @@ import { CanalesPanel } from "./CanalesPanel";
 import { ScoreBadge } from "./ScoreBadge";
 import { scoreFromTareaText } from "@/lib/scoring";
 import { reviewCraft } from "@/lib/guardian";
-
-const FUNNEL = [
-  { n: 420, l: "Contactos" },
-  { n: 126, l: "Interés", pct: "30%" },
-  { n: 48, l: "Agendadas", pct: "38%" },
-  { n: 36, l: "Visitaron", pct: "75%" },
-  { n: 14, l: "Apps" },
-  { n: 6, l: "Matrículas", pct: "meta 40" },
-];
 
 export function HoyClient({
   initialTareas,
@@ -56,6 +52,11 @@ export function HoyClient({
   const [demoMode, setDemoMode] = useState(false);
   const { status, refresh: refreshConnections } = useConnections();
 
+  const eq = equilibrioMetido(
+    SEMANA_MERCADO.cuposFinanciados,
+    SEMANA_MERCADO.cuposEquilibrio
+  );
+
   useEffect(() => {
     const q = searchParams.get("demo");
     if (q === "1") {
@@ -79,7 +80,7 @@ export function HoyClient({
       setOutlookOpen(true);
       toast("Faltan credenciales de Azure", "warn");
     } else if (outlook === "error") {
-      const msg = searchParams.get("msg") || "Error OAuth";
+      const msg = searchParams.get("msg") || "Error de conexión";
       toast(msg, "err");
       setOutlookOpen(true);
     }
@@ -92,6 +93,21 @@ export function HoyClient({
       tareas.filter((t) =>
         ["pendiente", "aprobada", "editada", "agendada"].includes(t.estado)
       ).length,
+    [tareas]
+  );
+
+  const financiadorTasks = useMemo(
+    () =>
+      tareas
+        .filter((t) => audienciaDeTarea(t) === "financiador")
+        .sort((a, b) => a.orden - b.orden),
+    [tareas]
+  );
+  const estudianteTasks = useMemo(
+    () =>
+      tareas
+        .filter((t) => audienciaDeTarea(t) === "estudiante")
+        .sort((a, b) => a.orden - b.orden),
     [tareas]
   );
 
@@ -178,7 +194,6 @@ export function HoyClient({
     setGuardianNote(null);
     const check = `${t.asunto}\n${t.cuerpo}`;
     if (hasUnresolvedConfirm(check) && t.canal !== "linkedin") {
-      // still allow opening for demo sim with warning for linkedin-less sendables
       if (!demoMode && !status?.forceMockSend) {
         toast(
           "Hay [CONFIRMAR] sin resolver. Edita la tarea antes de enviar.",
@@ -192,28 +207,7 @@ export function HoyClient({
       );
     }
     if (t.canal === "linkedin") {
-      toast("LinkedIn: solo borradores — úsalos desde Canales o Agentes", "warn");
-      return;
-    }
-    if (
-      showConnections &&
-      !status?.forceMockSend &&
-      !demoMode &&
-      (t.canal === "email" || t.canal === "email_wa" || t.canal === "region") &&
-      !status?.outlook.connected
-    ) {
-      // Offer demo path via send modal instead of blocking hard
-      setSendId(t.id);
-      return;
-    }
-    if (
-      showConnections &&
-      !status?.forceMockSend &&
-      !demoMode &&
-      t.canal === "whatsapp" &&
-      !status?.whatsapp.connected
-    ) {
-      setSendId(t.id);
+      toast("LinkedIn: solo borradores — ábrelos en «Cómo toco hoy»", "warn");
       return;
     }
     setSendId(t.id);
@@ -222,7 +216,6 @@ export function HoyClient({
   async function confirmSend(asDemo = false) {
     if (!sendId) return;
     const useDemo = asDemo || demoMode || Boolean(status?.forceMockSend);
-    // For real send path, still block unresolved confirm
     if (!useDemo && sendTask) {
       const check = `${sendTask.asunto}\n${sendTask.cuerpo}`;
       if (hasUnresolvedConfirm(check)) {
@@ -261,10 +254,9 @@ export function HoyClient({
     const demoOn = demoMode || Boolean(status?.forceMockSend);
     if (!calOk && !demoOn) {
       setAgendaOpen(true);
-      toast("Conecta Agenda Outlook o activa Demo", "warn");
+      toast("Conecta Agenda o activa Demo", "warn");
       return;
     }
-    // Prefer real Graph when calendar is connected and Demo is OFF
     const extra =
       calOk && !demoOn ? {} : ({ demo: true } as Record<string, boolean>);
     const data = await act(id, "agendar", extra);
@@ -274,7 +266,7 @@ export function HoyClient({
       String(data.message).includes("DEMO");
     toast(
       data.message ||
-        (isDemoMsg ? "DEMO: bloqueado en agenda" : "Visita agendada"),
+        (isDemoMsg ? "DEMO: bloqueado en agenda" : "Desayuno agendado"),
       isDemoMsg ? "warn" : "ok"
     );
     await refresh();
@@ -311,40 +303,121 @@ export function HoyClient({
     await refresh();
   }
 
-  async function onConfirmarVisita(slot: string) {
-    const res = await fetch("/api/demo/confirmar-visita", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slot }),
-    });
-    const data = await res.json();
-    toast(data.message || "Cupo marcado", "ok");
-    await refresh();
-  }
-
   function sendHint(canal: string) {
     if (demoMode || status?.forceMockSend) {
-      return "DEMO · se registrará como simulación (no llama a Graph/Meta/carrier).";
+      return "DEMO · se registrará como simulación (no envía de verdad).";
     }
     if (canal === "telefono") {
-      return "Piloto Llamada IA: usa Simular envío (demo) o el panel Canales.";
+      return "Llamada IA (soporte): usa Simular envío (demo).";
     }
     if (canal === "region") {
       return status?.outlook.connected
-        ? "Carta Región vía Outlook (o simular en DEMO)."
+        ? "Carta a financiador vía Outlook (o simular en DEMO)."
         : "Sin Outlook: usa «Simular envío (demo)».";
     }
     if (canal === "email" || canal === "email_wa") {
       return status?.outlook.connected
-        ? "Se intentará enviar vía Microsoft Graph."
+        ? "Se intentará enviar por correo."
         : "Sin Outlook: conecta o usa «Simular envío (demo)».";
     }
     if (canal === "whatsapp") {
       return status?.whatsapp.connected
-        ? "Se intentará enviar vía WhatsApp Cloud API."
+        ? "Se intentará enviar por WhatsApp."
         : "Sin WhatsApp: conecta o usa «Simular envío (demo)».";
     }
     return "";
+  }
+
+  function renderTaskCard(t: TareaHoy) {
+    const previewHtml = highlightConfirm(
+      (t.asunto ? `Asunto: ${t.asunto}\n\n` : "") + t.cuerpo
+    );
+    const done = t.estado === "enviada";
+    const aud = audienciaDeTarea(t);
+    return (
+      <article
+        key={t.id}
+        className={`rounded-[10px] border bg-cream-card p-4 ${
+          t.estado === "aprobada" || t.estado === "agendada"
+            ? "border-ok/40"
+            : t.estado === "enviada"
+              ? "border-border opacity-70"
+              : "border-border"
+        }`}
+      >
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy text-sm font-bold text-white">
+            {t.orden}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="m-0 text-base font-semibold">{t.titulo}</h3>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <Badge tone={aud === "financiador" ? "fin" : "est"}>
+                {aud === "financiador" ? "Financiador" : "Interesado"}
+              </Badge>
+              <Badge>{CANAL_LABEL[t.canal] || t.canal}</Badge>
+              <Badge>{t.programaFoco}</Badge>
+              <Badge tone={t.estado}>{ESTADO_LABEL[t.estado]}</Badge>
+              <Badge>{t.creadoPorAgente}</Badge>
+              <ScoreBadge
+                score={scoreFromTareaText(
+                  `${t.titulo} ${t.dest} ${t.programaFoco}`
+                )}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 text-sm">
+          <div className="mb-2 text-navy/70">
+            Para: <strong>{t.dest}</strong>
+          </div>
+          <pre
+            className="max-h-36 overflow-auto whitespace-pre-wrap rounded-lg bg-cream p-3 text-[13px] leading-relaxed text-navy/85"
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {done ? (
+            <span className="rounded-full border border-ok/30 bg-[#e8f5ee] px-3 py-1 text-xs font-medium text-ok">
+              Completada
+            </span>
+          ) : (
+            <>
+              {t.acciones.includes("aprobar") && (
+                <Btn primary disabled={busy} onClick={() => onAprobar(t.id)}>
+                  Aprobar
+                </Btn>
+              )}
+              {t.acciones.includes("editar") && (
+                <Btn disabled={busy} onClick={() => openEdit(t)}>
+                  Editar
+                </Btn>
+              )}
+              {t.acciones.includes("enviar") && (
+                <Btn ok disabled={busy} onClick={() => openSend(t)}>
+                  {t.canal === "telefono" ? "Simular / marcar" : "Enviar"}
+                </Btn>
+              )}
+              {t.acciones.includes("agendar") && (
+                <Btn disabled={busy} onClick={() => onAgendar(t.id)}>
+                  Agendar desayuno
+                </Btn>
+              )}
+              {t.acciones.includes("simular_llamada") && (
+                <Btn
+                  disabled={busy}
+                  onClick={() =>
+                    onSimularLlamada("Agendó desayuno").then(refresh)
+                  }
+                >
+                  Simular llamada
+                </Btn>
+              )}
+            </>
+          )}
+        </div>
+      </article>
+    );
   }
 
   return (
@@ -353,7 +426,8 @@ export function HoyClient({
         <div>
           <h1 className="m-0 text-2xl font-bold">Hoy</h1>
           <p className="mt-1 text-sm text-navy/65">
-            jueves 10 sep 2026 · Semana 8–14 sep · Cohorte 2027-1
+            jueves 10 sep 2026 · {SEMANA_MERCADO.rango} · Cohorte{" "}
+            {SEMANA_MERCADO.cohorte}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -377,6 +451,102 @@ export function HoyClient({
         </div>
       </div>
 
+      {/* Hero: Semana de mercado */}
+      <section className="mb-4 rounded-[12px] border border-navy/20 bg-navy px-4 py-4 text-white shadow-sm">
+        <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
+          {SEMANA_MERCADO.etiqueta}
+        </div>
+        <h2 className="m-0 mt-1 text-xl font-bold leading-snug">
+          {SEMANA_MERCADO.sedeFoco} · {SEMANA_MERCADO.zonaSegmento}
+        </h2>
+        <p className="m-0 mt-1 text-sm text-white/80">
+          Meta de la semana:{" "}
+          <strong className="text-white">{SEMANA_MERCADO.metaTexto}</strong>
+          {" · "}
+          Programa {SEMANA_MERCADO.programa} · sede foco{" "}
+          {SEMANA_MERCADO.sedeFoco}
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="rounded-lg bg-white/10 px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-white/55">
+              Cupos financiados
+            </div>
+            <div className="text-2xl font-bold">
+              {SEMANA_MERCADO.cuposFinanciados}
+              <span className="text-base font-medium text-white/60">
+                /{SEMANA_MERCADO.cuposEquilibrio}
+              </span>
+            </div>
+          </div>
+          <div className="rounded-lg bg-white/10 px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-white/55">
+              Conversaciones
+            </div>
+            <div className="text-2xl font-bold">
+              {SEMANA_MERCADO.conversacionesHechas}
+              <span className="text-base font-medium text-white/60">
+                /{SEMANA_MERCADO.conversacionesMeta}
+              </span>
+            </div>
+          </div>
+          <div className="rounded-lg bg-white/10 px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-white/55">
+              Orden del día
+            </div>
+            <div className="text-sm font-semibold leading-snug">
+              1. Financiadores → 2. Interesados
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Región / equilibrio */}
+      <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="m-0 text-base font-semibold">
+              Región / equilibrio · {SEMANA_MERCADO.sedeFoco}
+            </h2>
+            <p className="mt-0.5 text-xs text-navy/55">
+              Primero cerrar cupos con quien paga · después buscar docentes
+            </p>
+          </div>
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+              eq.met
+                ? "border-ok/30 bg-[#e8f5ee] text-ok"
+                : "border-warn/30 bg-[#f5e6c8] text-warn"
+            }`}
+          >
+            {eq.met
+              ? "Equilibrio alcanzado"
+              : `Faltan ${eq.faltan} cupos`}
+          </span>
+        </div>
+        <div className="mt-3">
+          <div className="mb-1 flex justify-between text-xs font-medium text-navy/70">
+            <span>
+              Cupos financiados {SEMANA_MERCADO.cuposFinanciados} /{" "}
+              {SEMANA_MERCADO.cuposEquilibrio} (punto de equilibrio)
+            </span>
+            <span>{eq.pct}%</span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-cream">
+            <div
+              className={`h-full rounded-full ${
+                eq.met ? "bg-ok" : "bg-gold"
+              }`}
+              style={{ width: `${eq.pct}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm font-medium text-navy/80">
+            {eq.met
+              ? "Siguiente: buscar estudiantes (interesados) en este territorio."
+              : "Aún no: el outreach a docentes en esta zona queda en segundo plano hasta el equilibrio."}
+          </p>
+        </div>
+      </section>
+
       {showConnections && (
         <CanalesPanel
           status={status}
@@ -385,7 +555,7 @@ export function HoyClient({
           onOpenAgenda={() => setAgendaOpen(true)}
           onOpenWhatsApp={() => setWaOpen(true)}
           onSimularLlamada={onSimularLlamada}
-          onConfirmarVisita={onConfirmarVisita}
+          onAgendarDesayuno={(tareaId) => onAgendar(tareaId)}
         />
       )}
 
@@ -393,7 +563,7 @@ export function HoyClient({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <StatusBadge
             connected={Boolean(status?.outlook.connected)}
-            label="Outlook"
+            label="Correo"
           />
           <StatusBadge
             connected={Boolean(status?.outlook.calendarConnected)}
@@ -413,30 +583,13 @@ export function HoyClient({
       )}
 
       <div className="mb-4 rounded-[10px] border border-border bg-[#eef2f8] px-4 py-3 text-sm leading-relaxed">
-        <strong>Modo ops:</strong> los agentes ya prepararon el craft. Tú solo{" "}
-        <strong>Apruebas · Editas · Envías · Agendas visita</strong>. Nada sale
-        sin tu OK.
+        <strong>Tu trabajo hoy:</strong> los agentes ya prepararon el craft. Tú{" "}
+        <strong>Apruebas · Editas · Envías · Agendas desayuno</strong>. Orden
+        fijo: <strong>financiadores primero</strong>, luego interesados. Nada
+        sale sin tu OK.
         {demoMode
-          ? " · Modo DEMO: puedes simular envíos sin Azure/Meta."
-          : " Email/WA requieren conexión (o activa Demo)."}
-      </div>
-
-      <div
-        className="mb-5 flex gap-2 overflow-x-auto rounded-[10px] border border-border bg-cream-card p-3"
-        title="Embudo EJEMPLO — últimos 30 días"
-      >
-        {FUNNEL.map((s) => (
-          <div
-            key={s.l}
-            className="min-w-[88px] flex-1 rounded-lg bg-cream px-2 py-2 text-center"
-          >
-            <div className="text-lg font-bold text-navy">{s.n}</div>
-            <div className="text-[11px] text-navy/60">{s.l}</div>
-            {s.pct && (
-              <div className="text-[10px] font-medium text-gold">{s.pct}</div>
-            )}
-          </div>
-        ))}
+          ? " · Modo DEMO: puedes simular sin Azure/Meta."
+          : " Correo/WA requieren conexión (o activa Demo)."}
       </div>
 
       {tareas.length === 0 ? (
@@ -450,100 +603,58 @@ export function HoyClient({
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {tareas.map((t) => {
-            const previewHtml = highlightConfirm(
-              (t.asunto ? `Asunto: ${t.asunto}\n\n` : "") + t.cuerpo
-            );
-            const done = t.estado === "enviada";
-            return (
-              <article
-                key={t.id}
-                className={`rounded-[10px] border bg-cream-card p-4 ${
-                  t.estado === "aprobada" || t.estado === "agendada"
-                    ? "border-ok/40"
-                    : t.estado === "enviada"
-                      ? "border-border opacity-70"
-                      : "border-border"
-                }`}
-              >
-                <div className="flex gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy text-sm font-bold text-white">
-                    {t.orden}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="m-0 text-base font-semibold">{t.titulo}</h3>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      <Badge>{CANAL_LABEL[t.canal] || t.canal}</Badge>
-                      <Badge>{t.programaFoco}</Badge>
-                      <Badge tone={t.estado}>{ESTADO_LABEL[t.estado]}</Badge>
-                      <Badge>{t.creadoPorAgente}</Badge>
-                      <ScoreBadge
-                        score={scoreFromTareaText(
-                          `${t.titulo} ${t.dest} ${t.programaFoco}`
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 text-sm">
-                  <div className="mb-2 text-navy/70">
-                    Para: <strong>{t.dest}</strong>
-                  </div>
-                  <pre
-                    className="max-h-36 overflow-auto whitespace-pre-wrap rounded-lg bg-cream p-3 text-[13px] leading-relaxed text-navy/85"
-                    dangerouslySetInnerHTML={{ __html: previewHtml }}
-                  />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {done ? (
-                    <span className="rounded-full border border-ok/30 bg-[#e8f5ee] px-3 py-1 text-xs font-medium text-ok">
-                      Completada
-                    </span>
-                  ) : (
-                    <>
-                      {t.acciones.includes("aprobar") && (
-                        <Btn
-                          primary
-                          disabled={busy}
-                          onClick={() => onAprobar(t.id)}
-                        >
-                          Aprobar
-                        </Btn>
-                      )}
-                      {t.acciones.includes("editar") && (
-                        <Btn disabled={busy} onClick={() => openEdit(t)}>
-                          Editar
-                        </Btn>
-                      )}
-                      {t.acciones.includes("enviar") && (
-                        <Btn ok disabled={busy} onClick={() => openSend(t)}>
-                          {t.canal === "telefono"
-                            ? "Simular / marcar"
-                            : "Enviar"}
-                        </Btn>
-                      )}
-                      {t.acciones.includes("agendar") && (
-                        <Btn disabled={busy} onClick={() => onAgendar(t.id)}>
-                          Agendar visita
-                        </Btn>
-                      )}
-                      {t.acciones.includes("simular_llamada") && (
-                        <Btn
-                          disabled={busy}
-                          onClick={() =>
-                            onSimularLlamada("Agendó visita").then(refresh)
-                          }
-                        >
-                          Simular llamada
-                        </Btn>
-                      )}
-                    </>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="m-0 text-lg font-semibold">1. Financiadores</h2>
+              <span className="text-xs text-navy/50">
+                Colegios / alcaldías / secretarías
+              </span>
+            </div>
+            <p className="mb-3 mt-0 text-xs text-navy/55">
+              Quienes pagan cupos · prioridad hasta el equilibrio
+            </p>
+            <div className="flex flex-col gap-3">
+              {financiadorTasks.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-border bg-cream-card p-4 text-sm text-navy/60">
+                  Sin tareas de financiador hoy.
+                </p>
+              ) : (
+                financiadorTasks.map(renderTaskCard)
+              )}
+            </div>
+          </section>
+
+          <section
+            className={
+              eq.met ? "" : "opacity-80 [&>div]:relative"
+            }
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="m-0 text-lg font-semibold">2. Estudiantes</h2>
+              <span className="text-xs text-navy/50">Docentes interesados</span>
+            </div>
+            <p className="mb-3 mt-0 text-xs text-navy/55">
+              {eq.met
+                ? "Equilibrio OK · ahora sí prioriza interesados del territorio."
+                : "Secundario en este territorio hasta cupos X / Y."}
+            </p>
+            {!eq.met && (
+              <div className="mb-3 rounded-lg border border-gold/40 bg-[#f8f1de] px-3 py-2 text-xs font-medium text-warn">
+                Visualmente en segundo plano · Neiva aún en{" "}
+                {SEMANA_MERCADO.cuposFinanciados}/{SEMANA_MERCADO.cuposEquilibrio}
+              </div>
+            )}
+            <div className="flex flex-col gap-3">
+              {estudianteTasks.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-border bg-cream-card p-4 text-sm text-navy/60">
+                  Sin tareas de interesados hoy.
+                </p>
+              ) : (
+                estudianteTasks.map(renderTaskCard)
+              )}
+            </div>
+          </section>
         </div>
       )}
 
@@ -558,7 +669,7 @@ export function HoyClient({
           <div
             key={f.id}
             className={`flex gap-3 border-b border-border/70 py-2.5 text-sm last:border-0 ${
-              f.kind === "human" ? "bg-[#f3faf6]/ -mx-1 px-1 rounded" : ""
+              f.kind === "human" ? "bg-[#f3faf6] -mx-1 px-1 rounded" : ""
             }`}
           >
             <div className="w-12 shrink-0 font-mono text-xs text-navy/50">
@@ -573,7 +684,7 @@ export function HoyClient({
 
       <p className="mt-5 text-sm text-navy/70">
         <Link href="/direccion" className="underline">
-          Ver dashboard Dirección →
+          Ver historia completa (Dirección) →
         </Link>
         {" · "}
         <Link href="/agentes" className="underline">
@@ -638,7 +749,11 @@ export function HoyClient({
 
       <Modal
         open={!!sendTask}
-        title={needsDemoOffer || demoMode ? "Envío / simulación DEMO" : "Confirmar envío"}
+        title={
+          needsDemoOffer || demoMode
+            ? "Envío / simulación DEMO"
+            : "Confirmar envío"
+        }
         size="sm"
         onClose={() => setSendId(null)}
         footer={
@@ -650,7 +765,9 @@ export function HoyClient({
             >
               Cancelar
             </button>
-            {(needsDemoOffer || demoMode || sendTask?.canal === "telefono") && (
+            {(needsDemoOffer ||
+              demoMode ||
+              sendTask?.canal === "telefono") && (
               <button
                 type="button"
                 disabled={busy}
@@ -660,25 +777,24 @@ export function HoyClient({
                 Simular envío (DEMO)
               </button>
             )}
-            {!needsDemoOffer && !demoMode && sendTask?.canal !== "telefono" && (
-              <button
-                type="button"
-                disabled={busy}
-                className="min-h-11 rounded-lg bg-ok px-4 text-sm font-medium text-white disabled:opacity-50"
-                onClick={() => confirmSend(false)}
-              >
-                Confirmar envío
-              </button>
-            )}
+            {!needsDemoOffer &&
+              !demoMode &&
+              sendTask?.canal !== "telefono" && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="min-h-11 rounded-lg bg-ok px-4 text-sm font-medium text-white disabled:opacity-50"
+                  onClick={() => confirmSend(false)}
+                >
+                  Confirmar envío
+                </button>
+              )}
             {needsDemoOffer && (
               <button
                 type="button"
                 className="min-h-11 rounded-lg border border-border px-3 text-sm"
                 onClick={() => {
-                  if (
-                    sendTask?.canal === "whatsapp"
-                  )
-                    setWaOpen(true);
+                  if (sendTask?.canal === "whatsapp") setWaOpen(true);
                   else setOutlookOpen(true);
                 }}
               >
@@ -719,7 +835,9 @@ export function HoyClient({
                 {guardianNote}
               </p>
             )}
-            <p className="mt-3 text-xs text-navy/60">{sendHint(sendTask.canal)}</p>
+            <p className="mt-3 text-xs text-navy/60">
+              {sendHint(sendTask.canal)}
+            </p>
           </>
         )}
       </Modal>
@@ -758,11 +876,11 @@ function Badge({
   tone?: string;
 }) {
   const cls =
-    tone === "aprobada" || tone === "agendada"
+    tone === "aprobada" || tone === "agendada" || tone === "fin"
       ? "border-ok/30 bg-[#e8f5ee] text-ok"
       : tone === "enviada"
         ? "border-navy/20 bg-navy/5 text-navy/70"
-        : tone === "editada"
+        : tone === "editada" || tone === "est"
           ? "border-gold/40 bg-[#f8f1de] text-warn"
           : "border-border bg-cream text-navy/75";
   return (
@@ -795,7 +913,12 @@ function Btn({
       ? "bg-ok text-white hover:opacity-90"
       : "border border-border bg-cream-card text-navy hover:bg-cream";
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className={`${base} ${style}`}>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`${base} ${style}`}
+    >
       {children}
     </button>
   );
