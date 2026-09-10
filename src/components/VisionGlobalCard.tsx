@@ -39,9 +39,12 @@ export function VisionGlobalCard({
             El elefante y la rebanada
           </h2>
         </div>
+        {/* Explicit colors: global `a { color: inherit }` would make text-white
+            disappear on bg-navy (navy-on-navy). */}
         <Link
           href="/estudio"
-          className="min-h-11 inline-flex items-center rounded-lg bg-navy px-3 text-sm font-semibold text-white hover:bg-navy-mid"
+          className="min-h-11 inline-flex items-center rounded-lg border border-navy bg-[#fffdf8] px-3 text-sm font-semibold text-navy hover:bg-cream"
+          style={{ color: "#1a2b4a" }}
         >
           Ver estudio completo →
         </Link>
@@ -63,7 +66,7 @@ export function VisionGlobalCard({
             <div className="text-[10px] uppercase tracking-wide text-navy/45">
               {s.rol === "financiador" ? "Financiador" : "Interesado"}
             </div>
-            <div className="text-xl font-bold">
+            <div className="text-xl font-bold text-navy">
               {s.n.toLocaleString("es-CO")}
             </div>
             <div className="text-[11px] leading-snug text-navy/60 line-clamp-2">
@@ -75,13 +78,22 @@ export function VisionGlobalCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <div className="min-w-[160px] flex-1">
-          <div className="mb-1 flex justify-between text-xs font-medium text-navy/70">
-            <span>% del SAM tocado (global)</span>
-            <span>
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-navy/70">
+              % del SAM tocado (global)
+            </span>
+            <span
+              className="inline-flex items-center rounded-md border border-navy/15 bg-white px-2.5 py-0.5 text-base font-bold tabular-nums text-navy shadow-sm"
+              aria-label={`Porcentaje abordado: ${g.pct}%`}
+            >
+              ~{g.pct}%
+            </span>
+            <span className="text-[11px] text-navy/55">
               {g.tocados.toLocaleString("es-CO")} /{" "}
-              {g.universo.toLocaleString("es-CO")} (~{g.pct}%)
+              {g.universo.toLocaleString("es-CO")}
             </span>
           </div>
+          {/* Bar only — no text inside navy fill */}
           <div className="h-2.5 overflow-hidden rounded-full bg-cream">
             <div
               className="h-full rounded-full bg-navy"
@@ -89,14 +101,14 @@ export function VisionGlobalCard({
             />
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-white px-3 py-2 text-xs">
+        <div className="rounded-lg border border-border bg-white px-3 py-2 text-xs text-navy">
           <div className="text-navy/50">Semana activa</div>
           <strong>
             S{SEMANA_ACTIVA.semana} · {SEMANA_ACTIVA.territorio}
           </strong>
           <div className="text-navy/65">{SEMANA_ACTIVA.foco}</div>
         </div>
-        <div className="rounded-lg border border-border bg-white px-3 py-2 text-xs">
+        <div className="rounded-lg border border-border bg-white px-3 py-2 text-xs text-navy">
           <div className="text-navy/50">Equilibrio cupos</div>
           <strong>
             {FINANCIADORES_ESTIMADO.cuposFinanciadosActual}/
