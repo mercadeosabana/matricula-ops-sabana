@@ -87,35 +87,35 @@ export const SEMANA_MERCADO = {
 export const PROGRAMAS_GERENCIA = [
   {
     programa: "Maestría en Educación",
-    metaInscritos: 12,
+    metaInscritos: 20,
     realInscritos: 2,
     semanasRestantes: 10,
     ritmoActualPorSemana: 0.2,
-    ritmoNecesarioPorSemana: 1.0,
+    ritmoNecesarioPorSemana: 1.8,
   },
   {
     programa: "Pedagogía",
-    metaInscritos: 10,
+    metaInscritos: 20,
     realInscritos: 1,
     semanasRestantes: 10,
     ritmoActualPorSemana: 0.15,
-    ritmoNecesarioPorSemana: 0.9,
+    ritmoNecesarioPorSemana: 1.9,
   },
   {
     programa: "Dirección y Gestión Educativa",
-    metaInscritos: 10,
+    metaInscritos: 20,
     realInscritos: 2,
     semanasRestantes: 10,
     ritmoActualPorSemana: 0.25,
-    ritmoNecesarioPorSemana: 0.8,
+    ritmoNecesarioPorSemana: 1.8,
   },
   {
     programa: "Desarrollo Infantil",
-    metaInscritos: 8,
+    metaInscritos: 20,
     realInscritos: 1,
     semanasRestantes: 10,
     ritmoActualPorSemana: 0.12,
-    ritmoNecesarioPorSemana: 0.7,
+    ritmoNecesarioPorSemana: 1.9,
   },
 ] as const;
 
@@ -155,7 +155,7 @@ export function paceDePrograma(p: {
 
 /** Portfolio gerencial */
 export const PORTFOLIO_GERENCIA = {
-  metaInscritosTotal: 40,
+  metaInscritosTotal: 80,
   realInscritosTotal: 6,
   campanaInicio: "2026-08-01",
   campanaInicioLabel: "1 ago 2026",
@@ -169,8 +169,8 @@ export const PORTFOLIO_GERENCIA = {
   costoPorVisitaCop: 1_333_333,
   costoPorMatriculaCop: 8_000_000,
   cuposFinanciados: 12,
-  cuposEquilibrio: 20,
-  nota: "Cifras EJEMPLO · cohorte 2027-1 · Facultad de Educación",
+  cuposEquilibrio: 40,
+  nota: "Cifras EJEMPLO · cohorte 2027-1 · Facultad de Educación · meta 80 inscritos / 40 cupos equilibrio",
 } as const;
 
 /**

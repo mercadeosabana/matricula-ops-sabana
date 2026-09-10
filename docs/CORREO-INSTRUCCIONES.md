@@ -50,6 +50,8 @@ Las metas las define **Laura Lucía / Ivan** en `/direccion` → **Metas de la c
 
 Por fila: **metaInscritos** (obligatoria), meta ingresos COP (opc.), cupos equilibrio (opc.). El portfolio es la **suma**. Natalia las ve en `/hoy` y `/estudio` en **solo lectura**.
 
+**Seed / defaults (Ivan · cohorte 2027-1):** por maestría **metaInscritos = 20**, **cuposEquilibrio = 10** → portfolio **80 inscritos / 40 cupos equilibrio**. Ingresos COP quedan en blanco (`null`) para que Lucía los fije en `/direccion`. Fresh deploys (sin `store.json` o al reset) cargan estos valores vía `defaultMetasCohorte()` / `ensureCuatroProgramas` en `src/lib/db.ts`. Si un `store.json` ya tiene metas viejas (p. ej. 12/10/10/8), Lucía puede editarlas o borrar el store para re-seed.
+
 
 ## Modelo de la semana (Hoy · Mercadeo)
 

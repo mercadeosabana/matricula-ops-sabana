@@ -71,7 +71,7 @@ npm start
 Alineados con:
 
 - `semana-ejemplo.md` (7 tareas Hoy)
-- `dashboard-direccion.md` (funnel 420→6, meta 40, $1.100M)
+- `dashboard-direccion.md` (funnel 420→6, meta 80, $1.100M)
 
 La DB se crea automáticamente en el primer request.
 

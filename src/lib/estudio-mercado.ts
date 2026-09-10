@@ -152,9 +152,9 @@ export const FINANCIADORES_ESTIMADO = {
     "Alcaldías con presupuesto de formación docente",
     "Colegios (privados / alianzas) que compran cupos",
   ],
-  puntoEquilibrioCohorte: 20,
+  puntoEquilibrioCohorte: 40,
   cuposFinanciadosActual: 12,
-  nota: "ESTIMADO · punto de equilibrio por cohorte demo (cupos pagados por terceros antes de escalar outreach a docentes del territorio).",
+  nota: "ESTIMADO · punto de equilibrio cohorte = 40 cupos (10 por maestría × 4 programas) antes de escalar outreach a docentes del territorio.",
 } as const;
 
 /** Dual embudo — etapas ESTIMADO (volúmenes demo) */
@@ -170,7 +170,7 @@ export const EMBUDO_FINANCIADORES = [
   { etapa: "Contactados", valor: 24, meta: false },
   { etapa: "En negociación", valor: 8, meta: false },
   { etapa: "Cupos cerrados", valor: 12, meta: false },
-  { etapa: "Punto de equilibrio", valor: 20, meta: true },
+  { etapa: "Punto de equilibrio", valor: 40, meta: true },
 ] as const;
 
 export const TOQUES_CANAL = [
@@ -192,7 +192,7 @@ export const INVERSION_RITMO = {
   horasPresupuesto: 240,
   semanasCampana: 6,
   semanasRestantes: 10,
-  metaInscritos: 40,
+  metaInscritos: 80,
   realInscritos: 6,
   nota: "ESTIMADO · demo cohorte 2027-1 · no es presupuesto oficial Unisabana",
 } as const;
@@ -295,7 +295,7 @@ export const PLAN_12_SEMANAS = [
     rango: "20–26 oct",
     foco: "Cierre cohorte · reactivar fríos D+14",
     territorio: "Mix priorizado",
-    meta: "Meta portfolio rumbo 40 inscritos",
+    meta: "Meta portfolio rumbo 80 inscritos",
     estado: "planeada" as const,
   },
 ] as const;

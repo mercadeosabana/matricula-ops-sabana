@@ -71,27 +71,27 @@ export function ensureCuatroProgramas(
   const defaults: Record<string, MetasCohorte["programas"][number]> = {
     "Maestría en Educación": {
       programa: "Maestría en Educación",
-      metaInscritos: 12,
-      metaIngresosCop: 330_000_000,
-      cuposEquilibrio: 5,
+      metaInscritos: 20,
+      metaIngresosCop: null,
+      cuposEquilibrio: 10,
     },
     "Maestría en Pedagogía": {
       programa: "Maestría en Pedagogía",
-      metaInscritos: 10,
-      metaIngresosCop: 275_000_000,
-      cuposEquilibrio: 5,
+      metaInscritos: 20,
+      metaIngresosCop: null,
+      cuposEquilibrio: 10,
     },
     "Maestría en Dirección y Gestión": {
       programa: "Maestría en Dirección y Gestión",
-      metaInscritos: 10,
-      metaIngresosCop: 275_000_000,
-      cuposEquilibrio: 5,
+      metaInscritos: 20,
+      metaIngresosCop: null,
+      cuposEquilibrio: 10,
     },
     "Maestría en Desarrollo Infantil": {
       programa: "Maestría en Desarrollo Infantil",
-      metaInscritos: 8,
-      metaIngresosCop: 220_000_000,
-      cuposEquilibrio: 5,
+      metaInscritos: 20,
+      metaIngresosCop: null,
+      cuposEquilibrio: 10,
     },
   };
 
