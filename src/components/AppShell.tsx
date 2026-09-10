@@ -3,16 +3,24 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useState } from "react";
-import { Modal } from "./Modal";
 import { ToastHost } from "./Toast";
 import type { Rol } from "@/lib/types";
+import {
+  OutlookConnectModal,
+  WhatsAppConnectModal,
+  useConnections,
+} from "./ConnectModals";
 
 export function AppShell({
   rol,
+  userName,
+  rolLabel,
   children,
   narrow,
 }: {
   rol: Rol;
+  userName: string;
+  rolLabel: string;
   children: ReactNode;
   narrow?: boolean;
 }) {
@@ -20,6 +28,7 @@ export function AppShell({
   const router = useRouter();
   const [outlookOpen, setOutlookOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
+  const { status, refresh } = useConnections();
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -45,7 +54,7 @@ export function AppShell({
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
-            {isMercadeo ? "Mercadeo" : "Dirección"}
+            {userName} · {rolLabel}
           </span>
           {isMercadeo && (
             <>
@@ -54,14 +63,14 @@ export function AppShell({
                 onClick={() => setOutlookOpen(true)}
                 className="min-h-11 rounded-lg border border-white/30 px-3 text-sm hover:bg-white/10"
               >
-                Conectar Outlook
+                {status?.outlook.connected ? "Outlook ✓" : "Conectar Outlook"}
               </button>
               <button
                 type="button"
                 onClick={() => setWaOpen(true)}
                 className="min-h-11 rounded-lg border border-white/30 px-3 text-sm hover:bg-white/10"
               >
-                Conectar WhatsApp
+                {status?.whatsapp.connected ? "WhatsApp ✓" : "Conectar WhatsApp"}
               </button>
             </>
           )}
@@ -99,9 +108,13 @@ export function AppShell({
               <span className="block cursor-not-allowed rounded-lg px-3 py-2 text-sm text-navy/35">
                 Colegios
               </span>
-              <span className="block cursor-not-allowed rounded-lg px-3 py-2 text-sm text-navy/35">
-                Ajustes
-              </span>
+              <button
+                type="button"
+                onClick={() => setOutlookOpen(true)}
+                className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-navy/80 hover:bg-cream"
+              >
+                Ajustes · Conexiones
+              </button>
             </>
           ) : (
             <>
@@ -118,7 +131,6 @@ export function AppShell({
           )}
         </nav>
 
-        {/* mobile tabs */}
         <div className="flex w-full gap-1 border-b border-border bg-cream-card px-2 py-2 md:hidden">
           {isMercadeo ? (
             <>
@@ -153,52 +165,22 @@ export function AppShell({
         </main>
       </div>
 
-      <Modal
-        open={outlookOpen}
-        onClose={() => setOutlookOpen(false)}
-        title="Conectar Outlook"
-        size="sm"
-        footer={
-          <button
-            type="button"
-            className="min-h-11 rounded-lg bg-navy px-4 text-sm font-medium text-white"
-            onClick={() => setOutlookOpen(false)}
-          >
-            Entendido
-          </button>
-        }
-      >
-        <p className="mb-2 text-sm font-semibold">Próximamente · OAuth Microsoft 365</p>
-        <p className="m-0 text-sm text-navy/70">
-          La conexión usará OAuth de Microsoft 365. En v1 el envío se registra
-          como mock / cola local. No se almacenan credenciales en este MVP.
-        </p>
-      </Modal>
-
-      <Modal
-        open={waOpen}
-        onClose={() => setWaOpen(false)}
-        title="Conectar WhatsApp Business"
-        size="sm"
-        footer={
-          <button
-            type="button"
-            className="min-h-11 rounded-lg bg-navy px-4 text-sm font-medium text-white"
-            onClick={() => setWaOpen(false)}
-          >
-            Entendido
-          </button>
-        }
-      >
-        <p className="mb-2 text-sm font-semibold">
-          Próximamente · WhatsApp Business (Meta)
-        </p>
-        <p className="m-0 text-sm text-navy/70">
-          Integración vía WhatsApp Business Platform (Meta OAuth). En v1 es un
-          stub: el craft queda listo y el envío se marca como mock hasta
-          conectar.
-        </p>
-      </Modal>
+      {isMercadeo && (
+        <>
+          <OutlookConnectModal
+            open={outlookOpen}
+            onClose={() => setOutlookOpen(false)}
+            status={status}
+            onChanged={refresh}
+          />
+          <WhatsAppConnectModal
+            open={waOpen}
+            onClose={() => setWaOpen(false)}
+            status={status}
+            onChanged={refresh}
+          />
+        </>
+      )}
 
       <ToastHost />
     </div>

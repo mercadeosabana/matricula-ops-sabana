@@ -19,7 +19,7 @@ export type TipoTarea =
   | "secuencia_d"
   | "wa_programa";
 
-export type EstadoEnvio = "queued" | "sent_mock" | "failed" | "blocked_stub";
+export type EstadoEnvio = "queued" | "sent_mock" | "sent" | "failed" | "blocked_stub";
 
 export interface User {
   id: string;

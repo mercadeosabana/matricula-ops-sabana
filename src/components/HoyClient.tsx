@@ -1,13 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ActividadItem, TareaHoy } from "@/lib/types";
 import { CANAL_LABEL, ESTADO_LABEL } from "@/lib/types";
 import { highlightConfirm, hasUnresolvedConfirm } from "@/lib/utils";
 import { Modal } from "./Modal";
 import { toast } from "./Toast";
 import Link from "next/link";
+import {
+  OutlookConnectModal,
+  StatusBadge,
+  WhatsAppConnectModal,
+  useConnections,
+} from "./ConnectModals";
 
 const FUNNEL = [
   { n: 420, l: "Contactos" },
@@ -21,11 +27,14 @@ const FUNNEL = [
 export function HoyClient({
   initialTareas,
   initialFeed,
+  showConnections = true,
 }: {
   initialTareas: TareaHoy[];
   initialFeed: ActividadItem[];
+  showConnections?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tareas, setTareas] = useState(initialTareas);
   const [feed, setFeed] = useState(initialFeed);
   const [editId, setEditId] = useState<string | null>(null);
@@ -33,6 +42,27 @@ export function HoyClient({
   const [asunto, setAsunto] = useState("");
   const [cuerpo, setCuerpo] = useState("");
   const [busy, setBusy] = useState(false);
+  const [outlookOpen, setOutlookOpen] = useState(false);
+  const [waOpen, setWaOpen] = useState(false);
+  const { status, refresh: refreshConnections } = useConnections();
+
+  useEffect(() => {
+    const outlook = searchParams.get("outlook");
+    if (!outlook) return;
+    if (outlook === "connected") {
+      toast("Outlook conectado", "ok");
+      refreshConnections();
+    } else if (outlook === "setup") {
+      setOutlookOpen(true);
+      toast("Faltan credenciales de Azure", "warn");
+    } else if (outlook === "error") {
+      const msg = searchParams.get("msg") || "Error OAuth";
+      toast(msg, "err");
+      setOutlookOpen(true);
+    }
+    router.replace("/hoy");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pending = useMemo(
     () =>
@@ -66,6 +96,8 @@ export function HoyClient({
       const data = await res.json();
       if (!res.ok) {
         toast(data.error || "Error", "err");
+        if (data.code === "OUTLOOK_NOT_CONNECTED") setOutlookOpen(true);
+        if (data.code === "WHATSAPP_NOT_CONNECTED") setWaOpen(true);
         return false;
       }
       return data;
@@ -107,6 +139,26 @@ export function HoyClient({
       );
       return;
     }
+    if (
+      showConnections &&
+      !status?.forceMockSend &&
+      (t.canal === "email" || t.canal === "email_wa") &&
+      !status?.outlook.connected
+    ) {
+      toast("Conecta Outlook primero", "warn");
+      setOutlookOpen(true);
+      return;
+    }
+    if (
+      showConnections &&
+      !status?.forceMockSend &&
+      t.canal === "whatsapp" &&
+      !status?.whatsapp.connected
+    ) {
+      toast("Conecta WhatsApp primero", "warn");
+      setWaOpen(true);
+      return;
+    }
     setSendId(t.id);
   }
 
@@ -114,7 +166,7 @@ export function HoyClient({
     if (!sendId) return;
     const data = await act(sendId, "enviar");
     if (data) {
-      toast(data.message || "Envío registrado (mock)", "ok");
+      toast(data.message || "Envío registrado", "ok");
       setSendId(null);
       await refresh();
     }
@@ -136,6 +188,26 @@ export function HoyClient({
     setBusy(false);
   }
 
+  function sendHint(canal: string) {
+    if (canal === "telefono") {
+      return "No hay carrier: se marca la llamada como lista / usada.";
+    }
+    if (status?.forceMockSend) {
+      return "FORCE_MOCK_SEND=1 · se registrará como mock sin llamar a Graph/Meta.";
+    }
+    if (canal === "email" || canal === "email_wa") {
+      return status?.outlook.connected
+        ? "Se intentará enviar vía Microsoft Graph (o encolar si no hay email real en el destino)."
+        : "Conecta Outlook primero.";
+    }
+    if (canal === "whatsapp") {
+      return status?.whatsapp.connected
+        ? "Se intentará enviar vía WhatsApp Cloud API (o encolar si no hay teléfono en el destino)."
+        : "Conecta WhatsApp primero.";
+    }
+    return "";
+  }
+
   return (
     <>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -155,10 +227,38 @@ export function HoyClient({
         </div>
       </div>
 
+      {showConnections && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <StatusBadge
+            connected={Boolean(status?.outlook.connected)}
+            label="Outlook"
+          />
+          <StatusBadge
+            connected={Boolean(status?.whatsapp.connected)}
+            label="WhatsApp"
+          />
+          <button
+            type="button"
+            onClick={() => setOutlookOpen(true)}
+            className="text-xs underline text-navy/60 hover:text-navy"
+          >
+            Gestionar Outlook
+          </button>
+          <button
+            type="button"
+            onClick={() => setWaOpen(true)}
+            className="text-xs underline text-navy/60 hover:text-navy"
+          >
+            Gestionar WhatsApp
+          </button>
+        </div>
+      )}
+
       <div className="mb-4 rounded-[10px] border border-border bg-[#eef2f8] px-4 py-3 text-sm leading-relaxed">
         <strong>Modo ops:</strong> los agentes ya prepararon el craft. Tú solo{" "}
         <strong>Apruebas · Editas · Envías · Agendas visita</strong>. Nada sale
-        sin tu OK. Outlook / WhatsApp reales: próximamente (OAuth).
+        sin tu OK. Email requiere Outlook conectado; WhatsApp requiere Cloud API.
+        {status?.forceMockSend ? " Mock forzado (FORCE_MOCK_SEND=1)." : ""}
       </div>
 
       <div
@@ -387,14 +487,27 @@ export function HoyClient({
               <br />
               Canal: {CANAL_LABEL[sendTask.canal]} · Para: {sendTask.dest}
             </p>
-            <p className="mt-3 text-xs text-navy/60">
-              {sendTask.canal === "telefono"
-                ? "No hay carrier: se marca la llamada como lista / usada."
-                : "Envío mock local (Outlook/WA reales = stub próximamente). Se registra auditoría."}
-            </p>
+            <p className="mt-3 text-xs text-navy/60">{sendHint(sendTask.canal)}</p>
           </>
         )}
       </Modal>
+
+      {showConnections && (
+        <>
+          <OutlookConnectModal
+            open={outlookOpen}
+            onClose={() => setOutlookOpen(false)}
+            status={status}
+            onChanged={refreshConnections}
+          />
+          <WhatsAppConnectModal
+            open={waOpen}
+            onClose={() => setWaOpen(false)}
+            status={status}
+            onChanged={refreshConnections}
+          />
+        </>
+      )}
     </>
   );
 }

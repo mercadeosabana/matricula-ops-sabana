@@ -8,9 +8,9 @@ Los agentes proponen craft (email / WhatsApp / guion / visita). Mercadeo aprueba
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript + Tailwind CSS v4
-- Persistencia SQLite vía `sql.js` (archivo en `data/matricula.sqlite`)
-- Auth demo por cookie de rol (Mercadeo / Dirección) — sin SSO real
-- Envíos mock solamente; Outlook / WhatsApp = stubs OAuth “próximamente”
+- Persistencia JSON store (`data/store.json` local; `/tmp` en Vercel)
+- Auth demo por persona: Laura Natalia (Mercadeo) / Laura Lucía (Dirección)
+- Conexiones reales: Outlook OAuth (Azure) + WhatsApp Cloud API; ver `docs/SETUP-OAUTH.md`
 
 ## Requisitos
 
@@ -27,8 +27,8 @@ npm run dev
 
 Abre [http://localhost:3000](http://localhost:3000).
 
-- **Entrar como Mercadeo** → `/hoy`
-- **Entrar como Dirección** → `/direccion`
+- **Entrar como Laura Natalia · Mercadeo** → `/hoy`
+- **Entrar como Laura Lucía · Dirección** → `/direccion`
 - Log unificado → `/actividad`
 
 Producción local:
@@ -68,10 +68,10 @@ La DB se crea automáticamente en el primer request.
 
 ## Notas v1
 
-- Nada se envía por Outlook/WA real.
+- Email/WhatsApp requieren conexión (o `FORCE_MOCK_SEND=1` para mock).
 - Marcas `[CONFIRMAR]` bloquean el envío hasta editarlas.
 - Secuencia D+3/7/14: al **Aprobar** tarea #6 se encolan 3 envíos `queued`.
-- No hacer `git push` hasta cambiar auth a mercadeosabana.
+- Setup Azure/Meta: [`docs/SETUP-OAUTH.md`](docs/SETUP-OAUTH.md).
 
 ## Specs de origen
 

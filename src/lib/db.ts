@@ -140,7 +140,22 @@ function loadStore(): Store {
         Array.isArray(parsed.actividad) &&
         Array.isArray(parsed.metricas)
       ) {
+        // Keep persona names in sync with seed
+        if (Array.isArray(parsed.users)) {
+          const byId = new Map(USERS.map((u) => [u.id, u]));
+          parsed.users = parsed.users.map((u) => {
+            const seed = byId.get(u.id);
+            if (!seed) return u;
+            return {
+              ...u,
+              nombre: seed.nombre,
+              email: seed.email,
+              rol: seed.rol,
+            };
+          });
+        }
         cache = parsed;
+        persist(cache);
         return cache;
       }
     } catch {

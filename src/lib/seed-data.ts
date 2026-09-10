@@ -3,16 +3,16 @@
 export const USERS = [
   {
     id: "u-mercadeo",
-    nombre: "Ana Mercadeo",
-    email: "ana.mercadeo@unisabana.edu.co",
+    nombre: "Laura Natalia",
+    email: "laura.natalia@unisabana.edu.co",
     rol: "mercadeo" as const,
     activo: 1,
     createdAt: "2026-09-01T08:00:00-05:00",
   },
   {
     id: "u-direccion",
-    nombre: "Dirección Facultad",
-    email: "direccion.educacion@unisabana.edu.co",
+    nombre: "Laura Lucía",
+    email: "laura.lucia@unisabana.edu.co",
     rol: "direccion" as const,
     activo: 1,
     createdAt: "2026-09-01T08:00:00-05:00",

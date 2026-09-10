@@ -9,7 +9,15 @@ import {
   createEnvio,
 } from "@/lib/db";
 import { getSessionRol, userIdForRol, actorNameForRol } from "@/lib/auth";
+import {
+  getConnectionStatus,
+  isOutlookConnected,
+  isWhatsAppConnected,
+} from "@/lib/connections";
+import { sendViaOutlook } from "@/lib/outlook";
+import { sendViaWhatsApp } from "@/lib/whatsapp";
 import { v4 as uuidv4 } from "uuid";
+import type { EstadoEnvio } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +54,6 @@ export async function PATCH(
       createdAt: iso,
     });
 
-    // Secuencia D+3/7/14: al aprobar crea 3 envíos programados (mock)
     if (tarea.tipo === "secuencia_d") {
       for (const offset of [3, 7, 14]) {
         const d = new Date();
@@ -126,20 +133,87 @@ export async function PATCH(
       );
     }
 
-    // Mock send: email/telefono = sent_mock; WA/Outlook real = still mock in v1
-    // Spec: if Outlook not connected → blocked_stub for email; we do mock OK for demo
-    // User asked: "mock send only"
-    const estadoEnvio =
-      tarea.canal === "whatsapp" || tarea.canal === "email"
-        ? "sent_mock"
-        : "sent_mock";
+    const status = getConnectionStatus();
+    const forceMock = status.forceMockSend;
+    let estadoEnvio: EstadoEnvio = "sent_mock";
+    let message = "Envío registrado (mock)";
+
+    if (tarea.canal === "telefono") {
+      estadoEnvio = forceMock ? "sent_mock" : "sent";
+      message = "Llamada marcada como lista";
+    } else if (tarea.canal === "email" || tarea.canal === "email_wa") {
+      if (!forceMock && !isOutlookConnected()) {
+        return NextResponse.json(
+          {
+            error: "Conecta Outlook primero",
+            code: "OUTLOOK_NOT_CONNECTED",
+          },
+          { status: 400 }
+        );
+      }
+      const result = await sendViaOutlook({
+        to: tarea.dest,
+        subject: tarea.asunto || tarea.titulo,
+        body: tarea.cuerpo,
+      });
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.error, code: result.code },
+          { status: 400 }
+        );
+      }
+      if (result.mode === "graph") {
+        estadoEnvio = "sent";
+        message = "Email enviado vía Outlook (Microsoft Graph)";
+      } else if (result.mode === "queued") {
+        estadoEnvio = "queued";
+        message = "Email encolado para envío (sin destinatario real o cola)";
+      } else {
+        estadoEnvio = "sent_mock";
+        message = "Envío registrado (mock · FORCE_MOCK_SEND=1)";
+      }
+    } else if (tarea.canal === "whatsapp") {
+      if (!forceMock && !isWhatsAppConnected()) {
+        return NextResponse.json(
+          {
+            error: "Conecta WhatsApp primero",
+            code: "WHATSAPP_NOT_CONNECTED",
+          },
+          { status: 400 }
+        );
+      }
+      const result = await sendViaWhatsApp({
+        to: tarea.dest,
+        body: tarea.cuerpo,
+      });
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.error, code: result.code },
+          { status: 400 }
+        );
+      }
+      if (result.mode === "cloud") {
+        estadoEnvio = "sent";
+        message = "WhatsApp enviado vía Cloud API";
+      } else if (result.mode === "queued") {
+        estadoEnvio = "queued";
+        message = "WhatsApp encolado para envío";
+      } else {
+        estadoEnvio = "sent_mock";
+        message = "Envío registrado (mock · FORCE_MOCK_SEND=1)";
+      }
+    }
 
     await createEnvio({
       id: uuidv4(),
       tareaHoyId: id,
       canal: tarea.canal,
       destinatario: tarea.dest,
-      payload: JSON.stringify({ asunto: tarea.asunto, cuerpo: tarea.cuerpo }),
+      payload: JSON.stringify({
+        asunto: tarea.asunto,
+        cuerpo: tarea.cuerpo,
+        mode: estadoEnvio,
+      }),
       estado: estadoEnvio,
       enviadoPorUserId: userId,
       createdAt: iso,
@@ -154,7 +228,11 @@ export async function PATCH(
     const verb =
       tarea.canal === "telefono"
         ? "Marcó lista para llamada"
-        : "Envió (mock)";
+        : estadoEnvio === "sent_mock"
+          ? "Envió (mock)"
+          : estadoEnvio === "queued"
+            ? "Encoló envío"
+            : "Envió";
     await pushActividad({
       time,
       actor,
@@ -166,10 +244,7 @@ export async function PATCH(
     return NextResponse.json({
       tarea: updated,
       envio: { estado: estadoEnvio },
-      message:
-        tarea.canal === "telefono"
-          ? "Llamada marcada como lista"
-          : "Envío registrado (mock)",
+      message,
     });
   }
 

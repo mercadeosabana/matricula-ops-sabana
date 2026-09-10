@@ -3,6 +3,23 @@ import type { Rol } from "./types";
 
 export const SESSION_COOKIE = "matricula_ops_rol";
 
+export const PERSONAS: Record<
+  Rol,
+  { id: string; nombre: string; rolLabel: string; cargo?: string }
+> = {
+  mercadeo: {
+    id: "u-mercadeo",
+    nombre: "Laura Natalia",
+    rolLabel: "Mercadeo",
+  },
+  direccion: {
+    id: "u-direccion",
+    nombre: "Laura Lucía",
+    rolLabel: "Dirección",
+    cargo: "Directora maestrías presenciales · Educación",
+  },
+};
+
 export async function getSessionRol(): Promise<Rol | null> {
   const jar = await cookies();
   const v = jar.get(SESSION_COOKIE)?.value;
@@ -11,13 +28,17 @@ export async function getSessionRol(): Promise<Rol | null> {
 }
 
 export function rolLabel(rol: Rol) {
-  return rol === "direccion" ? "Dirección" : "Mercadeo";
+  return PERSONAS[rol].rolLabel;
 }
 
 export function userIdForRol(rol: Rol) {
-  return rol === "direccion" ? "u-direccion" : "u-mercadeo";
+  return PERSONAS[rol].id;
 }
 
 export function actorNameForRol(rol: Rol) {
-  return rol === "direccion" ? "Dirección Facultad" : "Ana Mercadeo";
+  return PERSONAS[rol].nombre;
+}
+
+export function personaForRol(rol: Rol) {
+  return PERSONAS[rol];
 }
