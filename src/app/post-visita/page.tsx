@@ -13,7 +13,7 @@ export default async function PostVisitaPage() {
   const [colegios, leads] = await Promise.all([listColegios(), listLeads()]);
   const byId = new Map(colegios.map((c) => [c.id, c]));
   const initial = leads
-    .filter((l) => l.etapaFunnel === "post-visita" && l.postVisita)
+    .filter((l) => l.postVisita && (l.etapaFunnel === "seguimiento" || l.etapaFunnel === "post-visita"))
     .map((lead) => ({ lead, colegio: byId.get(lead.colegioId) }));
 
   return (

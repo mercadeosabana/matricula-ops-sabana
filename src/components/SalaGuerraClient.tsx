@@ -8,7 +8,9 @@ import {
   briefSemanaTexto,
 } from "@/lib/admissions-data";
 import { FUNNEL_EJEMPLO } from "@/lib/seed-data";
+import Link from "next/link";
 import { toast } from "./Toast";
+import { Plan4SemanasZona } from "./Plan4SemanasZona";
 
 // FUNNEL_MOVE might not exist - I'll inline in admissions-data or fix import
 const MOVE = [
@@ -55,6 +57,17 @@ export function SalaGuerraClient() {
           Generar brief de la semana
         </button>
       </div>
+
+      <div className="mb-4">
+        <Plan4SemanasZona variant="compact" showChannels />
+      </div>
+      <p className="mb-4 text-xs text-navy/55">
+        Detalle del playbook (etapas, dual funnel, canales barrido/toque) en{" "}
+        <Link href="/playbook" className="font-semibold underline" style={{ color: "#1a2b4a" }}>
+          /playbook
+        </Link>
+        .
+      </p>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {MOVE.map((m) => (

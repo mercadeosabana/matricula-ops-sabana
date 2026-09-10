@@ -13,6 +13,7 @@ import {
 } from "@/lib/market-story";
 import { VisionGlobalCard } from "./VisionGlobalCard";
 import { MetasCohortePanel } from "./MetasCohortePanel";
+import { PlaybookHoySections } from "./PlaybookHoySections";
 import type { MetasCohorte } from "@/lib/types";
 import { Modal } from "./Modal";
 import { toast } from "./Toast";
@@ -470,6 +471,8 @@ export function HoyClient({
         canEdit={false}
         variant="compact"
       />
+
+      <PlaybookHoySections />
 
       {/* Hero: Semana de mercado — la rebanada */}
       <section className="mb-4 rounded-[12px] border border-navy/20 bg-navy px-4 py-4 text-white shadow-sm">

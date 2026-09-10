@@ -121,6 +121,11 @@ export type AttributionSnapshot = {
 };
 
 const RESPONDIO = new Set([
+  "respondio",
+  "siguiente_paso",
+  "propuesta_brochure",
+  "seguimiento",
+  "cerrado_ganado",
   "interes",
   "interés",
   "agendada",
@@ -131,6 +136,10 @@ const RESPONDIO = new Set([
   "matricula",
 ]);
 const VISITA = new Set([
+  "siguiente_paso",
+  "seguimiento",
+  "propuesta_brochure",
+  "cerrado_ganado",
   "agendada",
   "visita",
   "post-visita",
@@ -138,7 +147,13 @@ const VISITA = new Set([
   "matrícula",
   "matricula",
 ]);
-const MATRICULA = new Set(["matricula", "matrícula", "aplicacion"]);
+const MATRICULA = new Set([
+  "cerrado_ganado",
+  "matricula",
+  "matrícula",
+  "aplicacion",
+  "propuesta_brochure",
+]);
 
 function funnelFromLeads(leads: Lead[]): FunnelMini {
   const contactados = leads.length;

@@ -214,13 +214,24 @@ export function EstudioClient({
 
       {/* 4. Cómo comemos el elefante */}
       <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
-        <h2 className="m-0 text-base font-semibold">
-          4. Cómo comemos el elefante · 12 semanas
-        </h2>
-        <p className="mt-1 text-xs text-navy/55">
-          Ejemplo gerencial · semana {SEMANA_ACTIVA.semana} activa (
-          {SEMANA_ACTIVA.rango})
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="m-0 text-base font-semibold">
+              4. Cómo comemos el elefante · 12 semanas
+            </h2>
+            <p className="mt-1 text-xs text-navy/55">
+              Ejemplo gerencial · semana {SEMANA_ACTIVA.semana} activa (
+              {SEMANA_ACTIVA.rango})
+            </p>
+          </div>
+          <Link
+            href="/playbook"
+            className="min-h-9 inline-flex items-center rounded-lg border border-navy bg-white px-3 text-xs font-semibold"
+            style={{ color: "#1a2b4a" }}
+          >
+            Plan 4 semanas · zona activa →
+          </Link>
+        </div>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>

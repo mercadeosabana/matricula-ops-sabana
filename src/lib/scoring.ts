@@ -17,9 +17,22 @@ export function scoreLead(lead: ScoreableLead): ScoreLabel {
   else pts += 1;
 
   const etapa = (lead.etapaFunnel || "").toLowerCase();
-  if (["matricula", "aplicacion", "post-visita", "visita", "agendada"].includes(etapa))
+  if (
+    [
+      "cerrado_ganado",
+      "seguimiento",
+      "propuesta_brochure",
+      "siguiente_paso",
+      "matricula",
+      "aplicacion",
+      "post-visita",
+      "visita",
+      "agendada",
+    ].includes(etapa)
+  )
     pts += 4;
-  else if (["interes", "interés"].includes(etapa)) pts += 2;
+  else if (["respondio", "interes", "interés", "esperando_respuesta"].includes(etapa))
+    pts += 2;
 
   if (lead.visitado) pts += 3;
   if (lead.opened) pts += 1;

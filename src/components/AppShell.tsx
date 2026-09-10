@@ -108,6 +108,9 @@ export function AppShell({
               <NavLink href="/crm" active={pathname === "/crm"}>
                 CRM
               </NavLink>
+              <NavLink href="/playbook" active={pathname === "/playbook"}>
+                Playbook
+              </NavLink>
               <NavLink href="/post-visita" active={pathname === "/post-visita"}>
                 Post-visita
               </NavLink>
@@ -150,6 +153,9 @@ export function AppShell({
               </NavLink>
               <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
                 Sala de guerra
+              </NavLink>
+              <NavLink href="/playbook" active={pathname === "/playbook"}>
+                Playbook
               </NavLink>
               <NavLink href="/capacidad" active={pathname === "/capacidad"}>
                 Capacidad
