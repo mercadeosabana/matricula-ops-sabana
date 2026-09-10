@@ -80,6 +80,7 @@ export interface Lead {
   cargo: string;
   email: string | null;
   telefonoWa: string | null;
+  /** Etapa playbook (barrido_nuevo … cerrado_frio); legado se normaliza */
   etapaFunnel: string;
   programaInteres: string | null;
   tags: string[];
@@ -93,6 +94,12 @@ export interface Lead {
   opened: boolean;
   visitado: boolean;
   postVisita: PostVisitaChecklist | null;
+  /** Financiador vs interesado — embudo dual */
+  audiencia: Audiencia;
+  /** Una próxima acción del playbook */
+  nextStep: string;
+  /** Fecha ISO date (YYYY-MM-DD) de la próxima acción */
+  nextStepFecha: string | null;
 }
 
 export interface TareaHoy {

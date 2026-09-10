@@ -715,6 +715,15 @@ export function HoyClient({
           Agentes
         </Link>
         {" · "}
+        <Link
+          href="/interesado"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          Landing pauta (demo)
+        </Link>
+        {" · "}
         <button
           type="button"
           disabled={busy}

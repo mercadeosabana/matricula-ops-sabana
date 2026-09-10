@@ -47,3 +47,6 @@ next-env.d.ts
 # JSON local store
 /data/store.json
 /data/*.json
+.next-pauta
+
+.next-playbook/

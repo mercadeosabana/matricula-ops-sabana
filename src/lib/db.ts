@@ -14,6 +14,7 @@ import { randomUUID } from "crypto";
 import type {
   ActividadItem,
   AgendaEvent,
+  Audiencia,
   Colegio,
   Envio,
   Lead,
@@ -23,6 +24,10 @@ import type {
   User,
 } from "./types";
 import { normalizeOrigen } from "./origen";
+import {
+  normalizeEtapa,
+  normalizeNextStep,
+} from "./playbook";
 
 const DATA_DIR = process.env.VERCEL
   ? path.join("/tmp", "matricula-ops-data")
@@ -167,9 +172,15 @@ function mapLeadFromSeed(l: (typeof LEADS)[number]): Lead {
     opened?: boolean;
     visitado?: boolean;
     postVisita?: Lead["postVisita"];
+    audiencia?: Audiencia;
+    nextStep?: string;
+    nextStepFecha?: string | null;
   };
   const pv = extended.postVisita;
   const canalOrigen = extended.canalOrigen || "email";
+  const audiencia: Audiencia =
+    extended.audiencia === "financiador" ? "financiador" : "estudiante";
+  const etapaFunnel = normalizeEtapa(l.etapaFunnel);
   return {
     id: l.id,
     colegioId: l.colegioId,
@@ -177,7 +188,7 @@ function mapLeadFromSeed(l: (typeof LEADS)[number]): Lead {
     cargo: l.cargo,
     email: l.email,
     telefonoWa: l.telefonoWa,
-    etapaFunnel: l.etapaFunnel,
+    etapaFunnel,
     programaInteres: l.programaInteres,
     tags: parseJsonArray(l.tags as string | string[]),
     createdAt: l.createdAt,
@@ -198,10 +209,15 @@ function mapLeadFromSeed(l: (typeof LEADS)[number]): Lead {
           notas: pv.notas || "",
         }
       : null,
+    audiencia,
+    nextStep: normalizeNextStep(extended.nextStep, audiencia),
+    nextStepFecha: extended.nextStepFecha ?? null,
   };
 }
 
 function normalizeLead(raw: Partial<Lead> & { id: string }): Lead {
+  const audiencia: Audiencia =
+    raw.audiencia === "financiador" ? "financiador" : "estudiante";
   return {
     id: raw.id,
     colegioId: raw.colegioId || "",
@@ -209,7 +225,7 @@ function normalizeLead(raw: Partial<Lead> & { id: string }): Lead {
     cargo: raw.cargo || "",
     email: raw.email ?? null,
     telefonoWa: raw.telefonoWa ?? null,
-    etapaFunnel: raw.etapaFunnel || "contacto",
+    etapaFunnel: normalizeEtapa(raw.etapaFunnel || "barrido_nuevo"),
     programaInteres: raw.programaInteres ?? null,
     tags: Array.isArray(raw.tags)
       ? raw.tags
@@ -235,6 +251,9 @@ function normalizeLead(raw: Partial<Lead> & { id: string }): Lead {
           notas: raw.postVisita.notas || "",
         }
       : null,
+    audiencia,
+    nextStep: normalizeNextStep(raw.nextStep, audiencia),
+    nextStepFecha: raw.nextStepFecha ?? null,
   };
 }
 
@@ -397,7 +416,9 @@ function loadStore(): Store {
           parsed.leads.some((l) => l.owner === undefined) ||
           parsed.leads.some(
             (l) => !(l as Lead & { origen?: string }).origen
-          )
+          ) ||
+          parsed.leads.some((l) => !(l as Lead).nextStep) ||
+          parsed.leads.some((l) => !(l as Lead).audiencia)
         ) {
           parsed.colegios = COLEGIOS.map((c) => ({
             id: c.id,
@@ -611,11 +632,59 @@ export async function updateLead(
   return next;
 }
 
+export async function createLead(
+  input: Partial<Lead> & {
+    nombre: string;
+  }
+): Promise<Lead> {
+  const store = loadStore();
+  const id =
+    input.id ||
+    `l-pauta-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const lead = normalizeLead({
+    id,
+    colegioId: input.colegioId || "c-pauta",
+    nombre: input.nombre,
+    cargo: input.cargo || "Interesado",
+    email: input.email ?? null,
+    telefonoWa: input.telefonoWa ?? null,
+    etapaFunnel: input.etapaFunnel || "primer_acercamiento",
+    programaInteres: input.programaInteres ?? null,
+    tags: input.tags || [],
+    createdAt: input.createdAt || new Date().toISOString(),
+    owner: input.owner || "Laura Natalia",
+    nextTouch: input.nextTouch ?? "Primer contacto · Natalia",
+    origen: input.origen || "pauta_meta",
+    canalOrigen: input.canalOrigen || "web",
+    opened: Boolean(input.opened),
+    visitado: Boolean(input.visitado),
+    postVisita: input.postVisita ?? null,
+    audiencia: input.audiencia || "estudiante",
+    nextStep: input.nextStep || "enviar_brochure",
+    nextStepFecha: input.nextStepFecha ?? null,
+  });
+  // Ensure pauta colegio exists for CRM joins
+  if (!store.colegios.some((c) => c.id === lead.colegioId)) {
+    store.colegios.push({
+      id: lead.colegioId || "c-pauta",
+      nombre: "Interés pauta (formulario)",
+      ciudadZona: "Colombia",
+      programasFoco: [...PROGRAMAS_META_CANONICOS],
+      contactoPreferido: "email",
+      notas: "Leads inbound desde landing /interesado",
+      ultimoContactoAt: lead.createdAt,
+    });
+  }
+  store.leads.unshift(lead);
+  saveStore(store);
+  return lead;
+}
+
 export async function updatePostVisita(
   id: string,
   checklist: NonNullable<Lead["postVisita"]>
 ): Promise<Lead | null> {
-  return updateLead(id, { postVisita: checklist, etapaFunnel: "post-visita", visitado: true });
+  return updateLead(id, { postVisita: checklist, etapaFunnel: "seguimiento", visitado: true });
 }
 
 

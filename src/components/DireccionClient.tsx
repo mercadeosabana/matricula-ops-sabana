@@ -671,6 +671,15 @@ export function DireccionClient({
           <Link href="/agentes" className="underline">
             Agentes
           </Link>
+          {" · "}
+          <Link
+            href="/interesado"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Landing pauta (demo)
+          </Link>
         </p>
       </section>
 

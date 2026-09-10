@@ -23,6 +23,20 @@ export function BibliotecaClient() {
         <p className="mt-1 text-sm text-navy/65">
           One-pagers y piezas aprobadas por Dirección · copiar markdown
         </p>
+        <p className="mt-2 text-sm">
+          <a
+            href="/interesado"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-navy/80"
+          >
+            Landing pauta (demo)
+          </a>
+          <span className="text-navy/45">
+            {" "}
+            · formulario público Meta / LinkedIn → CRM Natalia
+          </span>
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
