@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import initSqlJs, { Database, SqlJsStatic } from "sql.js";
 import {
   ACTIVIDAD_SEED,
   COLEGIOS,
@@ -9,287 +8,178 @@ import {
   TAREAS,
   USERS,
 } from "./seed-data";
-import type { ActividadItem, TareaHoy } from "./types";
+import type {
+  ActividadItem,
+  Colegio,
+  Envio,
+  Lead,
+  MetricaDiaria,
+  TareaHoy,
+  User,
+} from "./types";
 
 const DATA_DIR = process.env.VERCEL
   ? path.join("/tmp", "matricula-ops-data")
   : path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "matricula.sqlite");
-const WASM_PATH = path.join(
-  process.cwd(),
-  "node_modules",
-  "sql.js",
-  "dist",
-  "sql-wasm.wasm"
-);
+const STORE_PATH = path.join(DATA_DIR, "store.json");
 
-let SQL: SqlJsStatic | null = null;
-let db: Database | null = null;
+type Store = {
+  users: User[];
+  colegios: Colegio[];
+  leads: Lead[];
+  tareas: TareaHoy[];
+  envios: Envio[];
+  actividad: ActividadItem[];
+  metricas: MetricaDiaria[];
+};
+
+let cache: Store | null = null;
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-function persist() {
-  if (!db) return;
-  ensureDir();
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
+function parseJsonArray(value: string | string[]): string[] {
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
 }
 
-async function getSql(): Promise<SqlJsStatic> {
-  if (SQL) return SQL;
-  const wasmBinary = fs.readFileSync(WASM_PATH);
-  SQL = await initSqlJs({ wasmBinary });
-  return SQL;
-}
-
-function createSchema(database: Database) {
-  database.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      nombre TEXT NOT NULL,
-      email TEXT NOT NULL,
-      rol TEXT NOT NULL,
-      activo INTEGER NOT NULL,
-      createdAt TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS colegios (
-      id TEXT PRIMARY KEY,
-      nombre TEXT NOT NULL,
-      ciudadZona TEXT NOT NULL,
-      programasFoco TEXT NOT NULL,
-      contactoPreferido TEXT NOT NULL,
-      notas TEXT,
-      ultimoContactoAt TEXT
-    );
-    CREATE TABLE IF NOT EXISTS leads (
-      id TEXT PRIMARY KEY,
-      colegioId TEXT NOT NULL,
-      nombre TEXT NOT NULL,
-      cargo TEXT NOT NULL,
-      email TEXT,
-      telefonoWa TEXT,
-      etapaFunnel TEXT NOT NULL,
-      programaInteres TEXT,
-      tags TEXT,
-      createdAt TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS tareas_hoy (
-      id TEXT PRIMARY KEY,
-      fecha TEXT NOT NULL,
-      orden INTEGER NOT NULL,
-      tipo TEXT NOT NULL,
-      canal TEXT NOT NULL,
-      titulo TEXT NOT NULL,
-      programaFoco TEXT NOT NULL,
-      dest TEXT NOT NULL,
-      asunto TEXT,
-      cuerpo TEXT NOT NULL,
-      estado TEXT NOT NULL,
-      creadoPorAgente TEXT NOT NULL,
-      aprobadaPorUserId TEXT,
-      enviadaAt TEXT,
-      acciones TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS envios (
-      id TEXT PRIMARY KEY,
-      tareaHoyId TEXT NOT NULL,
-      canal TEXT NOT NULL,
-      destinatario TEXT NOT NULL,
-      payload TEXT NOT NULL,
-      estado TEXT NOT NULL,
-      enviadoPorUserId TEXT NOT NULL,
-      createdAt TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS actividad (
-      id TEXT PRIMARY KEY,
-      time TEXT NOT NULL,
-      actor TEXT NOT NULL,
-      text TEXT NOT NULL,
-      kind TEXT NOT NULL,
-      createdAt TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS metrica_diaria (
-      fecha TEXT PRIMARY KEY,
-      colegiosContactados INTEGER,
-      respuestas INTEGER,
-      visitasAgendadas INTEGER,
-      visitasRealizadas INTEGER,
-      inscritos INTEGER,
-      matriculas INTEGER,
-      ingresoProyectadoCop REAL,
-      notasAgente TEXT
-    );
-  `);
-}
-
-function seed(database: Database) {
-  const count = database.exec("SELECT COUNT(*) as c FROM users");
-  const n = count[0]?.values[0]?.[0] as number;
-  if (n > 0) return;
-
-  for (const u of USERS) {
-    database.run(
-      `INSERT INTO users (id,nombre,email,rol,activo,createdAt) VALUES (?,?,?,?,?,?)`,
-      [u.id, u.nombre, u.email, u.rol, u.activo, u.createdAt]
-    );
-  }
-
-  for (const c of COLEGIOS) {
-    database.run(
-      `INSERT INTO colegios (id,nombre,ciudadZona,programasFoco,contactoPreferido,notas,ultimoContactoAt) VALUES (?,?,?,?,?,?,?)`,
-      [
-        c.id,
-        c.nombre,
-        c.ciudadZona,
-        c.programasFoco,
-        c.contactoPreferido,
-        c.notas,
-        c.ultimoContactoAt,
-      ]
-    );
-  }
-
-  for (const l of LEADS) {
-    database.run(
-      `INSERT INTO leads (id,colegioId,nombre,cargo,email,telefonoWa,etapaFunnel,programaInteres,tags,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [
-        l.id,
-        l.colegioId,
-        l.nombre,
-        l.cargo,
-        l.email,
-        l.telefonoWa,
-        l.etapaFunnel,
-        l.programaInteres,
-        l.tags,
-        l.createdAt,
-      ]
-    );
-  }
-
-  for (const t of TAREAS) {
-    database.run(
-      `INSERT INTO tareas_hoy (id,fecha,orden,tipo,canal,titulo,programaFoco,dest,asunto,cuerpo,estado,creadoPorAgente,aprobadaPorUserId,enviadaAt,acciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        t.id,
-        t.fecha,
-        t.orden,
-        t.tipo,
-        t.canal,
-        t.titulo,
-        t.programaFoco,
-        t.dest,
-        t.asunto,
-        t.cuerpo,
-        t.estado,
-        t.creadoPorAgente,
-        t.aprobadaPorUserId,
-        t.enviadaAt,
-        t.acciones,
-      ]
-    );
-  }
-
-  for (const a of ACTIVIDAD_SEED) {
-    database.run(
-      `INSERT INTO actividad (id,time,actor,text,kind,createdAt) VALUES (?,?,?,?,?,?)`,
-      [a.id, a.time, a.actor, a.text, a.kind, a.createdAt]
-    );
-  }
-
-  database.run(
-    `INSERT INTO metrica_diaria (fecha,colegiosContactados,respuestas,visitasAgendadas,visitasRealizadas,inscritos,matriculas,ingresoProyectadoCop,notasAgente) VALUES (?,?,?,?,?,?,?,?,?)`,
-    [
-      METRICA.fecha,
-      METRICA.colegiosContactados,
-      METRICA.respuestas,
-      METRICA.visitasAgendadas,
-      METRICA.visitasRealizadas,
-      METRICA.inscritos,
-      METRICA.matriculas,
-      METRICA.ingresoProyectadoCop,
-      METRICA.notasAgente,
-    ]
-  );
-
-  persist();
-}
-
-export async function getDb(): Promise<Database> {
-  if (db) return db;
-  ensureDir();
-  const sql = await getSql();
-  if (fs.existsSync(DB_PATH)) {
-    const buf = fs.readFileSync(DB_PATH);
-    db = new sql.Database(buf);
-  } else {
-    db = new sql.Database();
-  }
-  createSchema(db);
-  seed(db);
-  persist();
-  return db;
-}
-
-export async function resetDb() {
-  if (db) {
-    db.close();
-    db = null;
-  }
-  if (fs.existsSync(DB_PATH)) fs.unlinkSync(DB_PATH);
-  await getDb();
-}
-
-function rowToTarea(row: Record<string, unknown>): TareaHoy {
+function seedStore(): Store {
   return {
-    id: String(row.id),
-    fecha: String(row.fecha),
-    orden: Number(row.orden),
-    tipo: row.tipo as TareaHoy["tipo"],
-    canal: row.canal as TareaHoy["canal"],
-    titulo: String(row.titulo),
-    programaFoco: String(row.programaFoco),
-    dest: String(row.dest),
-    asunto: String(row.asunto || ""),
-    cuerpo: String(row.cuerpo),
-    estado: row.estado as TareaHoy["estado"],
-    creadoPorAgente: String(row.creadoPorAgente),
-    aprobadaPorUserId: row.aprobadaPorUserId
-      ? String(row.aprobadaPorUserId)
-      : null,
-    enviadaAt: row.enviadaAt ? String(row.enviadaAt) : null,
-    acciones: JSON.parse(String(row.acciones || "[]")),
+    users: USERS.map((u) => ({
+      id: u.id,
+      nombre: u.nombre,
+      email: u.email,
+      rol: u.rol,
+      activo: Boolean(u.activo),
+      createdAt: u.createdAt,
+    })),
+    colegios: COLEGIOS.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      ciudadZona: c.ciudadZona,
+      programasFoco: parseJsonArray(c.programasFoco),
+      contactoPreferido: c.contactoPreferido as Colegio["contactoPreferido"],
+      notas: c.notas,
+      ultimoContactoAt: c.ultimoContactoAt,
+    })),
+    leads: LEADS.map((l) => ({
+      id: l.id,
+      colegioId: l.colegioId,
+      nombre: l.nombre,
+      cargo: l.cargo,
+      email: l.email,
+      telefonoWa: l.telefonoWa,
+      etapaFunnel: l.etapaFunnel,
+      programaInteres: l.programaInteres,
+      tags: parseJsonArray(l.tags),
+      createdAt: l.createdAt,
+    })),
+    tareas: TAREAS.map((t) => ({
+      id: t.id,
+      fecha: t.fecha,
+      orden: t.orden,
+      tipo: t.tipo as TareaHoy["tipo"],
+      canal: t.canal as TareaHoy["canal"],
+      titulo: t.titulo,
+      programaFoco: t.programaFoco,
+      dest: t.dest,
+      asunto: t.asunto,
+      cuerpo: t.cuerpo,
+      estado: t.estado as TareaHoy["estado"],
+      creadoPorAgente: t.creadoPorAgente,
+      aprobadaPorUserId: t.aprobadaPorUserId,
+      enviadaAt: t.enviadaAt,
+      acciones: parseJsonArray(t.acciones),
+    })),
+    envios: [],
+    actividad: ACTIVIDAD_SEED.map((a) => ({
+      id: a.id,
+      time: a.time,
+      actor: a.actor,
+      text: a.text,
+      kind: a.kind as ActividadItem["kind"],
+      createdAt: a.createdAt,
+    })),
+    metricas: [
+      {
+        fecha: METRICA.fecha,
+        colegiosContactados: METRICA.colegiosContactados,
+        respuestas: METRICA.respuestas,
+        visitasAgendadas: METRICA.visitasAgendadas,
+        visitasRealizadas: METRICA.visitasRealizadas,
+        inscritos: METRICA.inscritos,
+        matriculas: METRICA.matriculas,
+        ingresoProyectadoCop: METRICA.ingresoProyectadoCop,
+        notasAgente: METRICA.notasAgente,
+      },
+    ],
   };
 }
 
-function queryAll(database: Database, sql: string, params: unknown[] = []) {
-  const stmt = database.prepare(sql);
-  stmt.bind(params as never[]);
-  const rows: Record<string, unknown>[] = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject() as Record<string, unknown>);
+function persist(store: Store) {
+  ensureDir();
+  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+}
+
+function loadStore(): Store {
+  if (cache) return cache;
+  ensureDir();
+  if (fs.existsSync(STORE_PATH)) {
+    try {
+      const raw = fs.readFileSync(STORE_PATH, "utf8");
+      const parsed = JSON.parse(raw) as Store;
+      if (
+        parsed &&
+        Array.isArray(parsed.tareas) &&
+        Array.isArray(parsed.actividad) &&
+        Array.isArray(parsed.metricas)
+      ) {
+        cache = parsed;
+        return cache;
+      }
+    } catch {
+      // fall through to seed
+    }
   }
-  stmt.free();
-  return rows;
+  cache = seedStore();
+  persist(cache);
+  return cache;
+}
+
+function saveStore(store: Store) {
+  cache = store;
+  persist(store);
+}
+
+export async function resetDb() {
+  cache = null;
+  if (fs.existsSync(STORE_PATH)) fs.unlinkSync(STORE_PATH);
+  // also clean legacy sqlite if present
+  const legacySqlite = path.join(DATA_DIR, "matricula.sqlite");
+  if (fs.existsSync(legacySqlite)) {
+    try {
+      fs.unlinkSync(legacySqlite);
+    } catch {
+      // ignore
+    }
+  }
+  loadStore();
 }
 
 export async function listTareas(): Promise<TareaHoy[]> {
-  const database = await getDb();
-  const rows = queryAll(
-    database,
-    "SELECT * FROM tareas_hoy ORDER BY orden ASC"
-  );
-  return rows.map(rowToTarea);
+  const store = loadStore();
+  return [...store.tareas].sort((a, b) => a.orden - b.orden);
 }
 
 export async function getTarea(id: string): Promise<TareaHoy | null> {
-  const database = await getDb();
-  const rows = queryAll(database, "SELECT * FROM tareas_hoy WHERE id = ?", [
-    id,
-  ]);
-  return rows[0] ? rowToTarea(rows[0]) : null;
+  const store = loadStore();
+  return store.tareas.find((t) => t.id === id) ?? null;
 }
 
 export async function updateTarea(
@@ -302,60 +192,53 @@ export async function updateTarea(
     enviadaAt: string | null;
   }>
 ): Promise<TareaHoy | null> {
-  const database = await getDb();
-  const current = await getTarea(id);
-  if (!current) return null;
-  const next = { ...current, ...patch };
-  database.run(
-    `UPDATE tareas_hoy SET estado=?, asunto=?, cuerpo=?, aprobadaPorUserId=?, enviadaAt=? WHERE id=?`,
-    [
-      next.estado,
-      next.asunto,
-      next.cuerpo,
-      next.aprobadaPorUserId,
-      next.enviadaAt,
-      id,
-    ]
-  );
-  persist();
-  return getTarea(id);
+  const store = loadStore();
+  const idx = store.tareas.findIndex((t) => t.id === id);
+  if (idx < 0) return null;
+  const current = store.tareas[idx];
+  const next: TareaHoy = {
+    ...current,
+    ...(patch.estado !== undefined
+      ? { estado: patch.estado as TareaHoy["estado"] }
+      : {}),
+    ...(patch.asunto !== undefined ? { asunto: patch.asunto } : {}),
+    ...(patch.cuerpo !== undefined ? { cuerpo: patch.cuerpo } : {}),
+    ...(patch.aprobadaPorUserId !== undefined
+      ? { aprobadaPorUserId: patch.aprobadaPorUserId }
+      : {}),
+    ...(patch.enviadaAt !== undefined ? { enviadaAt: patch.enviadaAt } : {}),
+  };
+  store.tareas[idx] = next;
+  saveStore(store);
+  return next;
 }
 
 export async function listActividad(
   kind?: "agente" | "human" | "all"
 ): Promise<ActividadItem[]> {
-  const database = await getDb();
-  let rows: Record<string, unknown>[];
+  const store = loadStore();
+  let items = [...store.actividad];
   if (kind && kind !== "all") {
-    rows = queryAll(
-      database,
-      "SELECT * FROM actividad WHERE kind = ? ORDER BY createdAt DESC",
-      [kind]
-    );
-  } else {
-    rows = queryAll(
-      database,
-      "SELECT * FROM actividad ORDER BY createdAt DESC"
-    );
+    items = items.filter((a) => a.kind === kind);
   }
-  return rows.map((r) => ({
-    id: String(r.id),
-    time: String(r.time),
-    actor: String(r.actor),
-    text: String(r.text),
-    kind: r.kind as "agente" | "human",
-    createdAt: String(r.createdAt),
-  }));
+  return items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
-export async function pushActividad(item: Omit<ActividadItem, "id"> & { id?: string }) {
-  const database = await getDb();
-  const id = item.id || `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  database.run(
-    `INSERT INTO actividad (id,time,actor,text,kind,createdAt) VALUES (?,?,?,?,?,?)`,
-    [id, item.time, item.actor, item.text, item.kind, item.createdAt]
-  );
-  persist();
+export async function pushActividad(
+  item: Omit<ActividadItem, "id"> & { id?: string }
+) {
+  const store = loadStore();
+  const id =
+    item.id || `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  store.actividad.unshift({
+    id,
+    time: item.time,
+    actor: item.actor,
+    text: item.text,
+    kind: item.kind,
+    createdAt: item.createdAt,
+  });
+  saveStore(store);
   return id;
 }
 
@@ -369,45 +252,38 @@ export async function createEnvio(envio: {
   enviadoPorUserId: string;
   createdAt: string;
 }) {
-  const database = await getDb();
-  database.run(
-    `INSERT INTO envios (id,tareaHoyId,canal,destinatario,payload,estado,enviadoPorUserId,createdAt) VALUES (?,?,?,?,?,?,?,?)`,
-    [
-      envio.id,
-      envio.tareaHoyId,
-      envio.canal,
-      envio.destinatario,
-      envio.payload,
-      envio.estado,
-      envio.enviadoPorUserId,
-      envio.createdAt,
-    ]
-  );
-  persist();
+  const store = loadStore();
+  store.envios.push({
+    id: envio.id,
+    tareaHoyId: envio.tareaHoyId,
+    canal: envio.canal,
+    destinatario: envio.destinatario,
+    payload: envio.payload,
+    estado: envio.estado as Envio["estado"],
+    enviadoPorUserId: envio.enviadoPorUserId,
+    createdAt: envio.createdAt,
+  });
+  saveStore(store);
 }
 
 export async function getMetricas() {
-  const database = await getDb();
-  const rows = queryAll(
-    database,
-    "SELECT * FROM metrica_diaria ORDER BY fecha DESC LIMIT 1"
+  const store = loadStore();
+  if (!store.metricas.length) return null;
+  const sorted = [...store.metricas].sort((a, b) =>
+    a.fecha < b.fecha ? 1 : -1
   );
-  return rows[0] || null;
+  return sorted[0] || null;
 }
 
 export async function updateLeadEtapa(colegioHint: string, etapa: string) {
-  const database = await getDb();
-  // Best-effort: update first lead matching dest context via colegio name fragment
-  const leads = queryAll(database, "SELECT * FROM leads");
-  const match = leads.find((l) =>
-    String(l.nombre).toLowerCase().includes(colegioHint.toLowerCase().slice(0, 8))
+  const store = loadStore();
+  const hint = colegioHint.toLowerCase().slice(0, 8);
+  const match = store.leads.find((l) =>
+    l.nombre.toLowerCase().includes(hint)
   );
   if (match) {
-    database.run(`UPDATE leads SET etapaFunnel = ? WHERE id = ?`, [
-      etapa,
-      match.id,
-    ]);
-    persist();
+    match.etapaFunnel = etapa;
+    saveStore(store);
   }
 }
 

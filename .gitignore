@@ -43,3 +43,7 @@ next-env.d.ts
 # SQLite local DB
 /data/*.sqlite
 /data/*.sqlite-*
+
+# JSON local store
+/data/store.json
+/data/*.json
