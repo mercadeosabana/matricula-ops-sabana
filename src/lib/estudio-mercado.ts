@@ -490,7 +490,7 @@ export const ZONAS_MAPA: ZonaMapa[] = [
   },
   {
     id: "huila",
-    nombre: "Huila",
+    nombre: "Huila / Neiva",
     tipo: "departamento",
     prioridad: "alta",
     docentesEstimado: 12_000,
@@ -506,7 +506,7 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     financiadoresNota:
       "ESTIMADO · colegios Neiva con presupuesto de formación + Secretaría de Educación Huila / Alcaldía Neiva (foco cupos).",
     ofertasUnisabana: [
-      "Convenio territorial Secretaría Huila / Alcaldía Neiva · cupos preferentes planta y provisionales.",
+      "Presencia regional Unisabana · Neiva · convenio territorial Secretaría Huila / Alcaldía · cupos preferentes planta y provisionales.",
       "Early bird institucional [CONFIRMAR: 15%] en paquetes de cupos financiados hacia equilibrio 20.",
       "Desayuno / visita campus Chía para líderes Neiva · o reunión 30 min en territorio [CONFIRMAR].",
       "Cohorte regional Neiva 2027-1 · sede ejemplo en biblioteca (Chía + Neiva).",
@@ -528,7 +528,8 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     ],
     ciudadesAncla: ["Neiva"],
     competenciaLocal: ["IES regionales (verificar SNIES)", "Oferta virtual UNAD/UNIMINUTO"],
-    mensajeComercial: "Semana activa · cupos financiados hacia equilibrio antes de escalar docentes.",
+    mensajeComercial:
+      "Presencia regional Unisabana · Neiva. Semana activa · cupos financiados hacia equilibrio antes de escalar docentes.",
     svgId: "andina-sur",
   },
   {
@@ -610,15 +611,16 @@ export const ZONAS_MAPA: ZonaMapa[] = [
   },
   {
     id: "atlantico",
-    nombre: "Atlántico / Caribe",
+    nombre: "Atlántico / Barranquilla",
     tipo: "departamento",
     prioridad: "media",
     docentesEstimado: 28_000,
-    docentesNota: "ESTIMADO · Atlántico + área metropolitana Barranquilla.",
+    docentesNota:
+      "ESTIMADO · Atlántico + área metropolitana Barranquilla. El pie Caribe Unisabana también incluye Guajira y Valledupar (zonas separadas en el mapa).",
     alumnosPotenciales: 2_800,
     alumnosNota: "ESTIMADO · docentes área Barranquilla con potencial cohorte digital/híbrida de contacto.",
     directivosInteresados: 560,
-    directivosNota: "ESTIMADO · directivos Caribe; semana 9 del plan · lista corta.",
+    directivosNota: "ESTIMADO · directivos Caribe Atlántico; semana 9 del plan · lista corta.",
     financiadoresColegios: 210,
     financiadoresPublicos: 12,
     financiadoresNota:
@@ -645,8 +647,97 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     ],
     ciudadesAncla: ["Barranquilla"],
     competenciaLocal: ["CUC", "UNAD", "UNIMINUTO"],
-    mensajeComercial: "Semana 9 del plan · lista corta + 1 financiador; no saturar sin equilibrio en Huila.",
-    svgId: "caribe",
+    mensajeComercial:
+      "Semana 9 del plan · lista corta + 1 financiador; no saturar sin equilibrio en Huila. Caribe Unisabana también cubre Guajira y Valledupar (ver zonas vecinas).",
+    svgId: "caribe-atlantico",
+  },
+  {
+    id: "guajira",
+    nombre: "La Guajira",
+    tipo: "departamento",
+    prioridad: "media",
+    docentesEstimado: 9_500,
+    docentesNota: "ESTIMADO · docentes departamento La Guajira; ancla Riohacha (+ Maicao / Uribia si útil).",
+    alumnosPotenciales: 950,
+    alumnosNota:
+      "ESTIMADO · ~10% del pool docente departamental con potencial de maestría Educación/Pedagogía/DI en horizonte 3 años.",
+    directivosInteresados: 190,
+    directivosNota:
+      "ESTIMADO · rectores y coordinadores Riohacha y municipios ancla; pipeline selectivo.",
+    financiadoresColegios: 55,
+    financiadoresPublicos: 5,
+    financiadoresNota:
+      "ESTIMADO · colegios Riohacha/Maicao + Secretaría de Educación Guajira / Alcaldía Riohacha.",
+    ofertasUnisabana: [
+      "Convenio territorial Secretaría Guajira / Alcaldía Riohacha · cupos preferentes (biblioteca Región).",
+      "Early bird institucional [CONFIRMAR: 15%] en paquetes de cupos · sin inventar tarifa fuera de [CONFIRMAR].",
+      "Invitación selectiva a desayuno / visita campus Chía para 3–5 líderes (viaje justificado).",
+      "One-pagers Educación + Pedagogía + Dirección · pie de presencia regional Unisabana en Caribe oriente.",
+      "Mensaje de marca nacional + acompañamiento; no pelear solo precio vs oferta virtual.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "UNAD",
+        nota: "ESTIMADO · virtual / distancia dominante por geografía; Sabana diferencia presencialidad y networking.",
+      },
+      {
+        nombre: "UNIMINUTO",
+        nota: "ESTIMADO · híbrida / cobertura; Sabana segmento medio-alto y liderazgos escolares.",
+      },
+      {
+        nombre: "IES regionales / CUC (Caribe)",
+        nota: "ESTIMADO · verificar SNIES vigentes; Unisabana llega con pie regional confirmado en Guajira.",
+      },
+    ],
+    ciudadesAncla: ["Riohacha", "Maicao"],
+    competenciaLocal: ["UNAD", "UNIMINUTO", "IES regionales / CUC (verificar)"],
+    mensajeComercial:
+      "Pie regional Unisabana confirmado en La Guajira · lista corta Riohacha + 1 financiador; coordinar con Atlántico/Valledupar sin saturar el mismo mes.",
+    svgId: "caribe-guajira",
+  },
+  {
+    id: "cesar",
+    nombre: "Cesar / Valledupar",
+    tipo: "departamento",
+    prioridad: "media",
+    docentesEstimado: 11_000,
+    docentesNota: "ESTIMADO · docentes Cesar; foco comercial Valledupar.",
+    alumnosPotenciales: 1_100,
+    alumnosNota:
+      "ESTIMADO · docentes Valledupar y municipios cercanos con potencial de maestría en horizonte 3 años.",
+    directivosInteresados: 220,
+    directivosNota:
+      "ESTIMADO · rectores y coordinadores Valledupar; entrada selectiva vía pie regional Unisabana.",
+    financiadoresColegios: 70,
+    financiadoresPublicos: 6,
+    financiadoresNota:
+      "ESTIMADO · colegios Valledupar + Secretaría de Educación Cesar / Alcaldía Valledupar.",
+    ofertasUnisabana: [
+      "Convenio territorial Secretaría Cesar / Alcaldía Valledupar · cupos institucionales (biblioteca Región).",
+      "Early bird institucional [CONFIRMAR: 15%] para paquetes hacia cupos financiados.",
+      "Desayuno / visita campus Chía para líderes Valledupar · o reunión 30 min en territorio [CONFIRMAR].",
+      "One-pagers Educación / Pedagogía / Dirección · mensaje pie regional Unisabana Caribe oriente.",
+      "Verificar oferta UPC / IES locales vigentes antes de claims en pitch.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "Universidad Popular del Cesar (UPC)",
+        nota: "ESTIMADO · marca local Valledupar; verificar maestrías educación vigentes antes del pitch.",
+      },
+      {
+        nombre: "UNAD",
+        nota: "ESTIMADO · virtual · alcance; Sabana diferencia campus y relación con colegios.",
+      },
+      {
+        nombre: "UNIMINUTO / IES Caribe",
+        nota: "ESTIMADO · cobertura e híbrida; Unisabana con pie regional confirmado en Valledupar.",
+      },
+    ],
+    ciudadesAncla: ["Valledupar"],
+    competenciaLocal: ["UPC (verificar)", "UNAD", "UNIMINUTO"],
+    mensajeComercial:
+      "Pie regional Unisabana confirmado en Valledupar (Cesar) · abrir con 1 financiador ancla y lista corta de directivos; alinear timing con Guajira/Atlántico.",
+    svgId: "caribe-cesar",
   },
   {
     id: "santander",
@@ -792,8 +883,10 @@ export const CIUDADES_CHIP = [
   { id: "medellin", label: "Medellín", zonaId: "antioquia" },
   { id: "cali", label: "Cali", zonaId: "valle" },
   { id: "barranquilla", label: "Barranquilla", zonaId: "atlantico" },
+  { id: "guajira", label: "Guajira", zonaId: "guajira" },
+  { id: "valledupar", label: "Valledupar", zonaId: "cesar" },
   { id: "bucaramanga", label: "Bucaramanga", zonaId: "santander" },
-  { id: "neiva", label: "Neiva", zonaId: "huila" },
+  { id: "neiva", label: "Neiva · regional", zonaId: "huila" },
 ] as const;
 
 export function pctAbordadoGlobal(): {

@@ -91,11 +91,25 @@ export function MapaMercadoColombia({
                 />
               </filter>
             </defs>
-            {/* Caribe */}
+            {/* Caribe · Guajira (norte) */}
             <RegionPath
-              d="M110 28 L175 22 L210 48 L195 78 L140 85 L105 60 Z"
-              zona={ZONAS_MAPA.find((z) => z.svgId === "caribe")!}
-              active={zona.svgId === "caribe"}
+              d="M158 10 L208 8 L232 32 L218 52 L175 48 L155 28 Z"
+              zona={ZONAS_MAPA.find((z) => z.svgId === "caribe-guajira")!}
+              active={zona.svgId === "caribe-guajira"}
+              onSelect={setZonaId}
+            />
+            {/* Caribe · Atlántico / Barranquilla */}
+            <RegionPath
+              d="M100 34 L155 28 L165 55 L142 78 L108 74 L95 52 Z"
+              zona={ZONAS_MAPA.find((z) => z.svgId === "caribe-atlantico")!}
+              active={zona.svgId === "caribe-atlantico"}
+              onSelect={setZonaId}
+            />
+            {/* Caribe · Cesar / Valledupar (este) */}
+            <RegionPath
+              d="M168 52 L218 52 L228 78 L200 98 L158 92 L152 68 Z"
+              zona={ZONAS_MAPA.find((z) => z.svgId === "caribe-cesar")!}
+              active={zona.svgId === "caribe-cesar"}
               onSelect={setZonaId}
             />
             {/* Andina norte (Antioquia) */}
@@ -155,12 +169,14 @@ export function MapaMercadoColombia({
               onSelect={setZonaId}
             />
 
-            {/* City pins */}
+            {/* City pins / labels */}
             <CityPin x={168} y={198} label="Bogotá" />
             <CityPin x={160} y={188} label="Chía" r={3} />
             <CityPin x={120} y={118} label="Medellín" />
             <CityPin x={85} y={215} label="Cali" />
-            <CityPin x={155} y={48} label="Baq" />
+            <CityPin x={132} y={48} label="Baq" />
+            <CityPin x={185} y={28} label="Guajira" r={3} />
+            <CityPin x={195} y={72} label="Valledupar" r={3} />
             <CityPin x={200} y={120} label="BGA" />
             <CityPin x={155} y={265} label="Neiva" />
           </svg>
