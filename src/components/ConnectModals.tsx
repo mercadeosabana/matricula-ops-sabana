@@ -7,6 +7,7 @@ import { toast } from "./Toast";
 export type ConnectionStatusPayload = {
   outlook: {
     connected: boolean;
+    calendarConnected: boolean;
     configured: boolean;
     accountEmail?: string | null;
     connectedAt?: string | null;
@@ -160,8 +161,8 @@ export function OutlookConnectModal({
             </p>
           )}
           <p className="mt-2 m-0 text-xs text-navy/55">
-            Los envíos por email usarán Microsoft Graph (Mail.Send). No se
-            simula el envío.
+            Email (Mail.Send) y Agenda (Calendars.ReadWrite) usan Microsoft
+            Graph. Si la agenda no aparece conectada, vuelve a iniciar OAuth.
           </p>
         </div>
       ) : configured ? (
@@ -170,9 +171,10 @@ export function OutlookConnectModal({
           <p className="mt-2 m-0 text-navy/70">
             Se abrirá el consentimiento de Azure AD con permisos{" "}
             <code className="text-xs">Mail.Send</code>,{" "}
+            <code className="text-xs">Calendars.ReadWrite</code>,{" "}
             <code className="text-xs">offline_access</code> y{" "}
-            <code className="text-xs">User.Read</code>. Los tokens se guardan
-            cifrados en el store del servidor.
+            <code className="text-xs">User.Read</code>. Mismo OAuth para
+            correo y agenda.
           </p>
         </div>
       ) : (
@@ -186,7 +188,7 @@ export function OutlookConnectModal({
               setup?.items || [
                 "App registration en Azure AD",
                 "Redirect URI https://matricula-ops-sabana.vercel.app/api/oauth/outlook/callback",
-                "Mail.Send + offline_access + User.Read",
+                "Mail.Send + Calendars.ReadWrite + offline_access + User.Read",
               ]
             ).map((item) => (
               <li key={item}>{item}</li>
@@ -365,6 +367,143 @@ export function WhatsAppConnectModal({
               <li key={item}>{item}</li>
             ))}
           </ul>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+export function AgendaConnectModal({
+  open,
+  onClose,
+  status,
+  onChanged,
+}: {
+  open: boolean;
+  onClose: () => void;
+  status: ConnectionStatusPayload | null;
+  onChanged: () => void;
+}) {
+  const configured = status?.outlook.configured;
+  const calendarConnected = Boolean(status?.outlook.calendarConnected);
+  const emailConnected = Boolean(status?.outlook.connected);
+  const setup = status?.setup?.outlook;
+
+  async function disconnect() {
+    const res = await fetch("/api/connections/outlook/disconnect", {
+      method: "POST",
+    });
+    if (res.ok) {
+      toast("Outlook / Agenda desconectado", "ok");
+      onChanged();
+    } else {
+      toast("No se pudo desconectar", "err");
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Conectar Agenda Outlook"
+      size="sm"
+      footer={
+        calendarConnected ? (
+          <>
+            <button
+              type="button"
+              className="min-h-11 rounded-lg border border-border px-4 text-sm"
+              onClick={disconnect}
+            >
+              Desconectar
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-lg bg-navy px-4 text-sm font-medium text-white"
+              onClick={onClose}
+            >
+              Listo
+            </button>
+          </>
+        ) : configured ? (
+          <>
+            <button
+              type="button"
+              className="min-h-11 rounded-lg border border-border px-4 text-sm"
+              onClick={onClose}
+            >
+              Cancelar
+            </button>
+            <a
+              href="/api/oauth/outlook/start"
+              className="inline-flex min-h-11 items-center rounded-lg bg-navy px-4 text-sm font-medium text-white"
+            >
+              {emailConnected ? "Reconectar con calendario" : "Conectar agenda"}
+            </a>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="min-h-11 rounded-lg bg-navy px-4 text-sm font-medium text-white"
+            onClick={onClose}
+          >
+            Entendido
+          </button>
+        )
+      }
+    >
+      {calendarConnected ? (
+        <div className="text-sm">
+          <p className="m-0 font-semibold text-ok">Agenda Outlook conectada</p>
+          {status?.outlook.accountEmail && (
+            <p className="mt-2 m-0 text-navy/70">
+              Cuenta: <strong>{status.outlook.accountEmail}</strong>
+            </p>
+          )}
+          <p className="mt-2 m-0 text-xs text-navy/55">
+            «Agendar visita» crea eventos en Graph (plantilla 2 h campus Chía).
+            Ver{" "}
+            <a href="/agenda" className="underline">
+              /agenda
+            </a>
+            .
+          </p>
+        </div>
+      ) : configured ? (
+        <div className="text-sm">
+          <p className="m-0 font-semibold">Agenda con Microsoft 365</p>
+          <p className="mt-2 m-0 text-navy/70">
+            Misma app Azure. OAuth pide{" "}
+            <code className="text-xs">Calendars.ReadWrite</code> además de
+            Mail.Send. Si ya conectaste solo correo, reconecta.
+          </p>
+          {emailConnected && !calendarConnected && (
+            <p className="mt-2 m-0 rounded-lg border border-gold/40 bg-[#f8f1de] px-3 py-2 text-xs text-warn">
+              Correo conectado, pero falta permiso de agenda — reconecta.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="text-sm">
+          <p className="m-0 font-semibold text-warn">
+            {setup?.title ||
+              "Faltan credenciales de Azure — pedir a TI / Ivan"}
+          </p>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-navy/75">
+            {(
+              setup?.items || [
+                "App registration en Azure AD",
+                "Calendars.ReadWrite + Mail.Send + offline_access + User.Read",
+              ]
+            ).map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <p className="mt-3 m-0 text-xs text-navy/55">
+            Sin Azure puedes usar <strong>modo DEMO</strong>: «Agendar visita»
+            simula el bloqueo. Ver{" "}
+            <code className="text-[11px]">docs/SETUP-OAUTH.md</code>.
+          </p>
         </div>
       )}
     </Modal>

@@ -10,6 +10,7 @@ import {
 } from "./seed-data";
 import type {
   ActividadItem,
+  AgendaEvent,
   Colegio,
   Envio,
   Lead,
@@ -31,12 +32,87 @@ type Store = {
   envios: Envio[];
   actividad: ActividadItem[];
   metricas: MetricaDiaria[];
+  agendaEvents: AgendaEvent[];
 };
 
 let cache: Store | null = null;
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+
+function mapLeadFromSeed(l: (typeof LEADS)[number]): Lead {
+  const extended = l as typeof l & {
+    owner?: string;
+    nextTouch?: string | null;
+    canalOrigen?: string;
+    opened?: boolean;
+    visitado?: boolean;
+    postVisita?: Lead["postVisita"];
+  };
+  const pv = extended.postVisita;
+  return {
+    id: l.id,
+    colegioId: l.colegioId,
+    nombre: l.nombre,
+    cargo: l.cargo,
+    email: l.email,
+    telefonoWa: l.telefonoWa,
+    etapaFunnel: l.etapaFunnel,
+    programaInteres: l.programaInteres,
+    tags: parseJsonArray(l.tags as string | string[]),
+    createdAt: l.createdAt,
+    owner: extended.owner || "Laura Natalia",
+    nextTouch: extended.nextTouch ?? null,
+    canalOrigen: extended.canalOrigen || "email",
+    opened: Boolean(extended.opened),
+    visitado: Boolean(extended.visitado),
+    postVisita: pv
+      ? {
+          docs: Boolean(pv.docs),
+          pago: Boolean(pv.pago),
+          beca: Boolean(pv.beca),
+          reminderD1: Boolean(pv.reminderD1),
+          reminderD3: Boolean(pv.reminderD3),
+          visitaAt: pv.visitaAt ?? null,
+          notas: pv.notas || "",
+        }
+      : null,
+  };
+}
+
+function normalizeLead(raw: Partial<Lead> & { id: string }): Lead {
+  return {
+    id: raw.id,
+    colegioId: raw.colegioId || "",
+    nombre: raw.nombre || "",
+    cargo: raw.cargo || "",
+    email: raw.email ?? null,
+    telefonoWa: raw.telefonoWa ?? null,
+    etapaFunnel: raw.etapaFunnel || "contacto",
+    programaInteres: raw.programaInteres ?? null,
+    tags: Array.isArray(raw.tags)
+      ? raw.tags
+      : parseJsonArray((raw.tags as unknown as string) || "[]"),
+    createdAt: raw.createdAt || new Date().toISOString(),
+    owner: raw.owner || "Laura Natalia",
+    nextTouch: raw.nextTouch ?? null,
+    canalOrigen: raw.canalOrigen || "email",
+    opened: Boolean(raw.opened),
+    visitado: Boolean(raw.visitado),
+    postVisita: raw.postVisita
+      ? {
+          docs: Boolean(raw.postVisita.docs),
+          pago: Boolean(raw.postVisita.pago),
+          beca: Boolean(raw.postVisita.beca),
+          reminderD1: Boolean(raw.postVisita.reminderD1),
+          reminderD3: Boolean(raw.postVisita.reminderD3),
+          visitaAt: raw.postVisita.visitaAt ?? null,
+          notas: raw.postVisita.notas || "",
+        }
+      : null,
+  };
 }
 
 function parseJsonArray(value: string | string[]): string[] {
@@ -68,18 +144,7 @@ function seedStore(): Store {
       notas: c.notas,
       ultimoContactoAt: c.ultimoContactoAt,
     })),
-    leads: LEADS.map((l) => ({
-      id: l.id,
-      colegioId: l.colegioId,
-      nombre: l.nombre,
-      cargo: l.cargo,
-      email: l.email,
-      telefonoWa: l.telefonoWa,
-      etapaFunnel: l.etapaFunnel,
-      programaInteres: l.programaInteres,
-      tags: parseJsonArray(l.tags),
-      createdAt: l.createdAt,
-    })),
+    leads: LEADS.map((l) => mapLeadFromSeed(l)),
     tareas: TAREAS.map((t) => ({
       id: t.id,
       fecha: t.fecha,
@@ -119,6 +184,7 @@ function seedStore(): Store {
         notasAgente: METRICA.notasAgente,
       },
     ],
+    agendaEvents: [],
   };
 }
 
@@ -153,6 +219,28 @@ function loadStore(): Store {
               rol: seed.rol,
             };
           });
+        }
+        // Refresh colegios/leads from seed when demo CRM expanded
+        if (
+          !Array.isArray(parsed.leads) ||
+          parsed.leads.length < LEADS.length ||
+          parsed.leads.some((l) => l.owner === undefined)
+        ) {
+          parsed.colegios = COLEGIOS.map((c) => ({
+            id: c.id,
+            nombre: c.nombre,
+            ciudadZona: c.ciudadZona,
+            programasFoco: parseJsonArray(c.programasFoco),
+            contactoPreferido: c.contactoPreferido as Colegio["contactoPreferido"],
+            notas: c.notas,
+            ultimoContactoAt: c.ultimoContactoAt,
+          }));
+          parsed.leads = LEADS.map((l) => mapLeadFromSeed(l));
+        } else {
+          parsed.leads = parsed.leads.map((l) => normalizeLead(l));
+        }
+        if (!Array.isArray(parsed.agendaEvents)) {
+          parsed.agendaEvents = [];
         }
         cache = parsed;
         persist(cache);
@@ -300,6 +388,101 @@ export async function updateLeadEtapa(colegioHint: string, etapa: string) {
     match.etapaFunnel = etapa;
     saveStore(store);
   }
+}
+
+
+export async function listColegios(): Promise<Colegio[]> {
+  const store = loadStore();
+  return [...store.colegios].sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+export async function listLeads(): Promise<Lead[]> {
+  const store = loadStore();
+  return store.leads.map((l) => normalizeLead(l));
+}
+
+export async function getLead(id: string): Promise<Lead | null> {
+  const store = loadStore();
+  const lead = store.leads.find((l) => l.id === id);
+  return lead ? normalizeLead(lead) : null;
+}
+
+export async function updateLead(
+  id: string,
+  patch: Partial<Lead>
+): Promise<Lead | null> {
+  const store = loadStore();
+  const idx = store.leads.findIndex((l) => l.id === id);
+  if (idx < 0) return null;
+  const next = normalizeLead({ ...store.leads[idx], ...patch, id });
+  store.leads[idx] = next;
+  saveStore(store);
+  return next;
+}
+
+export async function updatePostVisita(
+  id: string,
+  checklist: NonNullable<Lead["postVisita"]>
+): Promise<Lead | null> {
+  return updateLead(id, { postVisita: checklist, etapaFunnel: "post-visita", visitado: true });
+}
+
+
+export async function listAgendaEvents(): Promise<AgendaEvent[]> {
+  const store = loadStore();
+  return [...(store.agendaEvents || [])].sort((a, b) =>
+    a.startIso < b.startIso ? -1 : 1
+  );
+}
+
+export async function createAgendaEvent(
+  event: Omit<AgendaEvent, "id"> & { id?: string }
+): Promise<AgendaEvent> {
+  const store = loadStore();
+  if (!store.agendaEvents) store.agendaEvents = [];
+  const id =
+    event.id || `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const row: AgendaEvent = {
+    id,
+    subject: event.subject,
+    startIso: event.startIso,
+    endIso: event.endIso,
+    location: event.location,
+    attendeeEmail: event.attendeeEmail ?? null,
+    attendeeName: event.attendeeName ?? null,
+    tareaHoyId: event.tareaHoyId ?? null,
+    mode: event.mode,
+    graphEventId: event.graphEventId ?? null,
+    webLink: event.webLink ?? null,
+    createdAt: event.createdAt,
+    createdBy: event.createdBy,
+  };
+  store.agendaEvents.unshift(row);
+  saveStore(store);
+  return row;
+}
+
+export async function findLeadEmailForDest(dest: string): Promise<{
+  email: string | null;
+  nombre: string | null;
+}> {
+  const store = loadStore();
+  const lower = (dest || "").toLowerCase();
+  const emailMatch = dest.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if (emailMatch) {
+    return { email: emailMatch[0], nombre: null };
+  }
+  for (const lead of store.leads) {
+    if (!lead.email) continue;
+    const col = store.colegios.find((c) => c.id === lead.colegioId);
+    if (col && lower.includes(col.nombre.toLowerCase().slice(0, 8))) {
+      return { email: lead.email, nombre: lead.nombre };
+    }
+    if (lower.includes(lead.nombre.toLowerCase().slice(0, 8))) {
+      return { email: lead.email, nombre: lead.nombre };
+    }
+  }
+  return { email: null, nombre: null };
 }
 
 export function bogotaNow() {

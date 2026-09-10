@@ -17,6 +17,7 @@ type Props = {
   status: ConnectionStatusPayload | null;
   demoMode: boolean;
   onOpenOutlook: () => void;
+  onOpenAgenda?: () => void;
   onOpenWhatsApp: () => void;
   onSimularLlamada?: (resultado: string) => Promise<void>;
   onConfirmarVisita?: (slotLabel: string) => Promise<void>;
@@ -27,6 +28,7 @@ export function CanalesPanel({
   status,
   demoMode,
   onOpenOutlook,
+  onOpenAgenda,
   onOpenWhatsApp,
   onSimularLlamada,
   onConfirmarVisita,
@@ -38,6 +40,7 @@ export function CanalesPanel({
   const [busy, setBusy] = useState(false);
 
   const outlookOk = Boolean(status?.outlook.connected);
+  const agendaOk = Boolean(status?.outlook.calendarConnected);
   const waOk = Boolean(status?.whatsapp.connected);
 
   async function simular(resultado: string) {
@@ -74,6 +77,15 @@ export function CanalesPanel({
       tone: outlookOk ? "ok" : "neutral",
       badge: outlookOk ? null : demoMode ? "DEMO" : null,
       onClick: onOpenOutlook,
+    },
+    {
+      id: "agenda",
+      title: "Agenda Outlook",
+      subtitle: "Calendario · visitas",
+      status: agendaOk ? "Conectada" : "Conectar agenda",
+      tone: agendaOk ? "ok" : "neutral",
+      badge: agendaOk ? null : demoMode ? "DEMO" : null,
+      onClick: () => (onOpenAgenda ? onOpenAgenda() : onOpenOutlook()),
     },
     {
       id: "whatsapp",
@@ -138,7 +150,7 @@ export function CanalesPanel({
             </h2>
             {!compact && (
               <p className="mt-0.5 text-xs text-navy/55">
-                Outlook / WA · LinkedIn · Llamada IA · Visitas · Región/Convenios
+                Outlook / Agenda / WA · LinkedIn · Llamada IA · Visitas · Región
               </p>
             )}
           </div>
@@ -151,8 +163,8 @@ export function CanalesPanel({
         <div
           className={`grid gap-2 ${
             compact
-              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
-              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7"
+              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           }`}
         >
           {cards.map((c) => (

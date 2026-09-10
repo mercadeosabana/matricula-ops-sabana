@@ -7,14 +7,21 @@ import {
   updateLeadEtapa,
   updateTarea,
   createEnvio,
+  createAgendaEvent,
+  findLeadEmailForDest,
 } from "@/lib/db";
 import { getSessionRol, userIdForRol, actorNameForRol } from "@/lib/auth";
 import {
   getConnectionStatus,
+  isOutlookCalendarConnected,
   isOutlookConnected,
   isWhatsAppConnected,
 } from "@/lib/connections";
-import { sendViaOutlook } from "@/lib/outlook";
+import {
+  createOutlookCalendarEvent,
+  defaultCampusVisitWindow,
+  sendViaOutlook,
+} from "@/lib/outlook";
 import { sendViaWhatsApp } from "@/lib/whatsapp";
 import { v4 as uuidv4 } from "uuid";
 import type { EstadoEnvio } from "@/lib/types";
@@ -105,19 +112,101 @@ export async function PATCH(
   }
 
   if (action === "agendar") {
+    const demoAgendar = body.demo === true || body.demo === "1";
+    const calConnected = isOutlookCalendarConnected();
+    const window = defaultCampusVisitWindow();
+    const lead = await findLeadEmailForDest(tarea.dest);
+    const subject =
+      tarea.asunto?.trim() ||
+      `Visita campus Chía · ${tarea.titulo}`.slice(0, 200);
+
+    if (!calConnected && !demoAgendar) {
+      return NextResponse.json(
+        {
+          error:
+            "Conecta Agenda Outlook (Calendars.ReadWrite) o usa modo DEMO",
+          code: "CALENDAR_NOT_CONNECTED",
+        },
+        { status: 400 }
+      );
+    }
+
+    let mode: "graph" | "demo" | "queued" = "demo";
+    let graphEventId: string | null = null;
+    let webLink: string | null = null;
+    let message = "DEMO: bloqueado en agenda";
+
+    if (calConnected && !demoAgendar) {
+      const result = await createOutlookCalendarEvent({
+        subject,
+        body: tarea.cuerpo,
+        startIso: window.startIso,
+        endIso: window.endIso,
+        location: "Campus Unisabana · Chía",
+        attendeeEmail: lead.email,
+        attendeeName: lead.nombre,
+      });
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.error, code: result.code },
+          { status: 400 }
+        );
+      }
+      mode = result.mode;
+      graphEventId = result.eventId;
+      webLink = result.webLink || null;
+      message =
+        result.mode === "graph"
+          ? `Evento creado en Outlook · ${window.label}`
+          : result.mode === "queued"
+            ? `Evento encolado · ${window.label}`
+            : `DEMO: bloqueado en agenda · ${window.label}`;
+    } else {
+      mode = "demo";
+      graphEventId = `demo-${Date.now()}`;
+      message = `DEMO: bloqueado en agenda · ${window.label}`;
+    }
+
+    await createAgendaEvent({
+      subject,
+      startIso: window.startIso,
+      endIso: window.endIso,
+      location: "Campus Unisabana · Chía",
+      attendeeEmail: lead.email,
+      attendeeName: lead.nombre,
+      tareaHoyId: id,
+      mode,
+      graphEventId,
+      webLink,
+      createdAt: iso,
+      createdBy: actor,
+    });
+
     const updated = await updateTarea(id, {
       estado: "agendada",
       aprobadaPorUserId: userId,
     });
     await updateLeadEtapa(tarea.dest, "visita_agendada");
+
+    const actText =
+      mode === "demo"
+        ? `DEMO: bloqueado en agenda · tarea #${tarea.orden} · ${tarea.dest} · ${window.label}.`
+        : mode === "graph"
+          ? `Creó evento Outlook · tarea #${tarea.orden} · ${window.label} · ${tarea.dest}.`
+          : `Encoló evento de agenda · tarea #${tarea.orden} · ${window.label}.`;
+
     await pushActividad({
       time,
       actor,
-      text: `Agendó visita · tarea #${tarea.orden} · ${tarea.dest}.`,
+      text: actText,
       kind: "human",
       createdAt: iso,
     });
-    return NextResponse.json({ tarea: updated });
+    return NextResponse.json({
+      tarea: updated,
+      agenda: { mode, label: window.label, graphEventId, webLink },
+      message,
+    });
   }
 
   if (action === "enviar") {

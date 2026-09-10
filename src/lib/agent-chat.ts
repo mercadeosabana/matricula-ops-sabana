@@ -37,6 +37,17 @@ function heuristicDraft(agentId: AgentId, message: string): string {
     return `Plan cola Hoy (propuesta):\n1. Email frío San Viator (Captación)\n2. WA follow-up Vermont (Captación)\n3. Llamada IA piloto Vermont\n4. LinkedIn borradores rectores\n5. Visita campus — confirmar cupos sábados (Admisiones)\n6. Email líderes Chía (Inteligencia→Captación)\n7. Secuencia D+3/7/14 (un Aprobar = 3 toques)\n8. WA Desarrollo Infantil\n9. Región — carta Secretaría (convenio)\n\nNada sale sin OK de Mercadeo. Early bird cierra [CONFIRMAR: 15 oct] — priorizar warm + visitas.`;
   }
 
+
+  if (agentId === "guardian") {
+    if (/bloquear|riesgo|precio sin|sin confirmar|garantiz/.test(m)) {
+      return `Veredicto: **BLOQUEAR** (demo)\n\n• Hay claims o precios sin [CONFIRMAR] / promesa de admisión.\n• Ajusta tono a institucional y marca cifras con [CONFIRMAR: …].\n• Reenvía a Guardian antes de Hoy → Enviar.`;
+    }
+    if (/ok|revisa|revisar|guardian|craft|email|whatsapp|carta/.test(m) || wantsEmail) {
+      return `Veredicto: **OK** (demo)\n\n• Tono profesional · Facultad de Educación.\n• [CONFIRMAR] presentes donde aplica.\n• Sin promesas de admisión garantizada.\n\nPuedes proceder a Aprobar / Enviar en Hoy. Guardian no envía.`;
+    }
+    return `Soy Guardian. Pégame el craft (asunto + cuerpo) y te doy **OK** o **BLOQUEAR** con motivo.\nReviso: tono, [CONFIRMAR], claims, riesgo reputacional.`;
+  }
+
   // region
   if (/carta|secretar|convenio|alcald|gobern/.test(m) || wantsEmail) {
     return `Carta a Secretaría (borrador):\n\nAsunto: Convenio territorial · Maestrías Facultad de Educación · Unisabana\n\nEstimada/o Secretaria/o [Nombre],\nProponemos un convenio para que docentes de su jurisdicción cursen maestrías (Educación, Pedagogía, Dirección y Gestión, Desarrollo Infantil) con apoyo de la entidad territorial.\n• Cohortes regionales 2027-1 — fechas [CONFIRMAR]\n• Cupos preferentes planta/provisionales\n• Early bird institucional [CONFIRMAR: 15%] hasta [CONFIRMAR: 15 oct]\n• Inversión [CONFIRMAR: $28.5M–$29.2M] · pago entidad [CONFIRMAR]\nAgenda: reunión 30 min o visita Chía [CONFIRMAR: sáb 20/27 sep].\nFacultad de Educación · Unisabana · Agente Región\n\nLaura Natalia aprueba el envío; Dirección valida excepciones.`;

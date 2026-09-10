@@ -57,6 +57,16 @@ export interface Colegio {
   ultimoContactoAt: string | null;
 }
 
+export interface PostVisitaChecklist {
+  docs: boolean;
+  pago: boolean;
+  beca: boolean;
+  reminderD1: boolean;
+  reminderD3: boolean;
+  visitaAt: string | null;
+  notas: string;
+}
+
 export interface Lead {
   id: string;
   colegioId: string;
@@ -68,6 +78,12 @@ export interface Lead {
   programaInteres: string | null;
   tags: string[];
   createdAt: string;
+  owner: string;
+  nextTouch: string | null;
+  canalOrigen: string;
+  opened: boolean;
+  visitado: boolean;
+  postVisita: PostVisitaChecklist | null;
 }
 
 export interface TareaHoy {
@@ -106,6 +122,22 @@ export interface ActividadItem {
   text: string;
   kind: "agente" | "human";
   createdAt: string;
+}
+
+export interface AgendaEvent {
+  id: string;
+  subject: string;
+  startIso: string;
+  endIso: string;
+  location: string;
+  attendeeEmail?: string | null;
+  attendeeName?: string | null;
+  tareaHoyId?: string | null;
+  mode: "graph" | "demo" | "queued";
+  graphEventId?: string | null;
+  webLink?: string | null;
+  createdAt: string;
+  createdBy: string;
 }
 
 export interface MetricaDiaria {

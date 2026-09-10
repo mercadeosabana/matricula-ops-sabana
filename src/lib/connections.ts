@@ -14,6 +14,8 @@ export type OutlookTokens = {
   scope?: string;
   accountEmail?: string;
   connectedAt: string;
+  /** True when granted scopes include Calendars.ReadWrite */
+  calendarConnected?: boolean;
 };
 
 export type WhatsAppConnection = {
@@ -192,9 +194,22 @@ export function isWhatsAppConnected(): boolean {
   return Boolean(getWhatsAppConnection()?.token);
 }
 
+export function scopeHasCalendar(scope?: string | null): boolean {
+  if (!scope) return false;
+  return /Calendars\.(ReadWrite|Read)(\s|$)/i.test(scope);
+}
+
+export function isOutlookCalendarConnected(): boolean {
+  const tokens = getOutlookTokens();
+  if (!tokens?.accessToken) return false;
+  if (tokens.calendarConnected === true) return true;
+  return scopeHasCalendar(tokens.scope);
+}
+
 export type ConnectionStatus = {
   outlook: {
     connected: boolean;
+    calendarConnected: boolean;
     configured: boolean;
     accountEmail?: string | null;
     connectedAt?: string | null;
@@ -216,6 +231,7 @@ export function getConnectionStatus(): ConnectionStatus {
   return {
     outlook: {
       connected: Boolean(outlook?.accessToken),
+      calendarConnected: isOutlookCalendarConnected(),
       configured: azureEnvConfigured(),
       accountEmail: outlook?.accountEmail || null,
       connectedAt: outlook?.connectedAt || null,

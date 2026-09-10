@@ -141,6 +141,14 @@ export const CANAL_FUNNEL_POTENCIAL = [
     matriculas: 1,
   },
   {
+    canal: "Agenda Outlook",
+    estado: "live_pending" as const,
+    estadoLabel: "Requiere TI · Calendars.ReadWrite",
+    contactos: 48,
+    visitas: 36,
+    matriculas: 6,
+  },
+  {
     canal: "Visita campus",
     estado: "live" as const,
     estadoLabel: "Agenda 2 h activa",

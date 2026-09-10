@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CANAL_FUNNEL_POTENCIAL, readDemoClient } from "@/lib/demo";
 import { CanalesPanel } from "./CanalesPanel";
+import { COSTOS_EJEMPLO } from "@/lib/admissions-data";
 import {
+  AgendaConnectModal,
   OutlookConnectModal,
   WhatsAppConnectModal,
   useConnections,
@@ -44,6 +46,7 @@ export function DireccionClient({
   const { status, refresh } = useConnections();
   const [demoMode, setDemoMode] = useState(false);
   const [outlookOpen, setOutlookOpen] = useState(false);
+  const [agendaOpen, setAgendaOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
 
   useEffect(() => {
@@ -132,6 +135,7 @@ export function DireccionClient({
         status={status}
         demoMode={demoMode}
         onOpenOutlook={() => setOutlookOpen(true)}
+        onOpenAgenda={() => setAgendaOpen(true)}
         onOpenWhatsApp={() => setWaOpen(true)}
       />
 
@@ -183,8 +187,9 @@ export function DireccionClient({
           <strong>Cohortes regionales (Región / Convenios):</strong> alcaldías,
           secretarías y gobernaciones pueden financiar cupos de docentes en la
           región — palanca EJEMPLO para cerrar el gap vs meta 40. Outlook/WA
-          requieren credenciales TI; LinkedIn = borradores; Llamada IA y Región =
-          piloto.
+          requieren credenciales TI; <strong>Agenda Outlook</strong> usa
+          Calendars.ReadWrite (mismo OAuth) o modo DEMO; LinkedIn = borradores;
+          Llamada IA y Región = piloto.
         </p>
       </section>
 
@@ -228,6 +233,54 @@ export function DireccionClient({
           </span>
         ))}
       </div>
+
+      <section className="mb-4 rounded-[10px] border border-border bg-cream-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="m-0 text-base font-semibold">
+              Costos · CAC / visita / matrícula
+            </h2>
+            <p className="mt-1 text-xs text-navy/55">{COSTOS_EJEMPLO.nota}</p>
+          </div>
+          <Link href="/sala-guerra" className="text-xs underline text-navy/60">
+            Sala de guerra →
+          </Link>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg bg-cream p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
+              CAC EJEMPLO
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              ${(COSTOS_EJEMPLO.cacCop / 1_000_000).toFixed(1)}M
+            </div>
+            <div className="text-xs text-navy/55">COP / matrícula</div>
+          </div>
+          <div className="rounded-lg bg-cream p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
+              Costo por visita
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              ~${(COSTOS_EJEMPLO.costoPorVisitaCop / 1_000_000).toFixed(1)}M
+            </div>
+            <div className="text-xs text-navy/55">
+              {COSTOS_EJEMPLO.visitasRealizadas} visitas
+            </div>
+          </div>
+          <div className="rounded-lg bg-cream p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/45">
+              Costo por matrícula
+            </div>
+            <div className="mt-1 text-2xl font-bold">
+              ${(COSTOS_EJEMPLO.costoPorMatriculaCop / 1_000_000).toFixed(1)}M
+            </div>
+            <div className="text-xs text-navy/55">
+              {COSTOS_EJEMPLO.matriculas} matrículas · inv. $
+              {(COSTOS_EJEMPLO.inversionMercadeoCop / 1_000_000).toFixed(0)}M
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-2">
         <section className="rounded-[10px] border border-border bg-cream-card p-4">
@@ -358,6 +411,12 @@ export function DireccionClient({
       <OutlookConnectModal
         open={outlookOpen}
         onClose={() => setOutlookOpen(false)}
+        status={status}
+        onChanged={refresh}
+      />
+      <AgendaConnectModal
+        open={agendaOpen}
+        onClose={() => setAgendaOpen(false)}
         status={status}
         onChanged={refresh}
       />

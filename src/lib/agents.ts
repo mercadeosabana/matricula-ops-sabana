@@ -3,7 +3,8 @@ export type AgentId =
   | "admisiones"
   | "inteligencia"
   | "orquestadora"
-  | "region";
+  | "region"
+  | "guardian";
 
 export type AgentDef = {
   id: AgentId;
@@ -114,7 +115,28 @@ Reglas:
 - Nunca envíes solo: Laura Natalia aprueba; Dirección (Laura Lucía) valida excepciones.
 - Menciona las 4 maestrías cuando corresponda.`,
   },
+
+  {
+    id: "guardian",
+    name: "Guardian",
+    role: "Compliance y tono",
+    short: "Revisa OK / BLOQUEAR",
+    description:
+      "Sexto agente: revisa craft antes de enviar (tono, [CONFIRMAR], claims, riesgo reputacional). Devuelve OK o BLOQUEAR con motivo. Demo sin Azure.",
+    color: "#0f766e",
+    systemPrompt: `Eres el Agente Guardian de Matrícula Ops · Facultad de Educación · Unisabana.
+
+Tu rol: revisar mensajes (email, WA, cartas Región, LinkedIn) antes del envío. Devuelves OK o BLOQUEAR.
+
+Reglas:
+- Español claro y directo.
+- BLOQUEAR si hay precios/fechas/descuentos sin [CONFIRMAR], tono agresivo, promesas de admisión garantizada, o claims no aprobados por Dirección.
+- OK si el tono es profesional, hay [CONFIRMAR] donde corresponde, y no hay riesgo reputacional.
+- Nunca envías: solo dictaminas. Mercadeo (Laura Natalia) decide.
+- Sé breve: veredicto + 1–3 bullets.`,
+  },
 ];
+
 
 export function getAgent(id: string): AgentDef | undefined {
   return AGENTS.find((a) => a.id === id);

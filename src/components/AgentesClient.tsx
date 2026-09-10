@@ -89,6 +89,11 @@ export function AgentesClient() {
       "One-pager cohortes regionales",
       "Agenda reunión 30 min con alcaldía",
     ],
+    guardian: [
+      "Revisa riesgos de la cola de Hoy",
+      "Checklist cumplimiento [CONFIRMAR]",
+      "Alerta si hay envío sin aprobación",
+    ],
   };
 
   return (
@@ -96,12 +101,12 @@ export function AgentesClient() {
       <div className="mb-4">
         <h1 className="m-0 text-2xl font-bold">Agentes</h1>
         <p className="mt-1 text-sm text-navy/65">
-          Cinco agentes proponen craft e insights. Tú apruebas — nada se envía
+          Los agentes proponen craft e insights. Tú apruebas — nada se envía
           solo. Chat en la voz de cada uno.
         </p>
       </div>
 
-      <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {AGENTS.map((a) => {
           const active = a.id === agentId;
           return (

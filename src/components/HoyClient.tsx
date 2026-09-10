@@ -10,12 +10,16 @@ import { Modal } from "./Modal";
 import { toast } from "./Toast";
 import Link from "next/link";
 import {
+  AgendaConnectModal,
   OutlookConnectModal,
   StatusBadge,
   WhatsAppConnectModal,
   useConnections,
 } from "./ConnectModals";
 import { CanalesPanel } from "./CanalesPanel";
+import { ScoreBadge } from "./ScoreBadge";
+import { scoreFromTareaText } from "@/lib/scoring";
+import { reviewCraft } from "@/lib/guardian";
 
 const FUNNEL = [
   { n: 420, l: "Contactos" },
@@ -45,7 +49,10 @@ export function HoyClient({
   const [cuerpo, setCuerpo] = useState("");
   const [busy, setBusy] = useState(false);
   const [outlookOpen, setOutlookOpen] = useState(false);
+  const [agendaOpen, setAgendaOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
+  const [pasarGuardian, setPasarGuardian] = useState(true);
+  const [guardianNote, setGuardianNote] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(false);
   const { status, refresh: refreshConnections } = useConnections();
 
@@ -133,6 +140,7 @@ export function HoyClient({
       if (!res.ok) {
         toast(data.error || "Error", "err");
         if (data.code === "OUTLOOK_NOT_CONNECTED") setOutlookOpen(true);
+        if (data.code === "CALENDAR_NOT_CONNECTED") setAgendaOpen(true);
         if (data.code === "WHATSAPP_NOT_CONNECTED") setWaOpen(true);
         return false;
       }
@@ -167,6 +175,7 @@ export function HoyClient({
   }
 
   function openSend(t: TareaHoy) {
+    setGuardianNote(null);
     const check = `${t.asunto}\n${t.cuerpo}`;
     if (hasUnresolvedConfirm(check) && t.canal !== "linkedin") {
       // still allow opening for demo sim with warning for linkedin-less sendables
@@ -221,23 +230,54 @@ export function HoyClient({
         return;
       }
     }
-    // Demo send bypasses confirm check on server only if we strip or use demo flag
-    // Server still checks CONFIRMAR — for demo, temporarily allow by editing? 
-    // Better: pass demo and have server skip confirm when demo=true
+    if (pasarGuardian && sendTask) {
+      const verdict = reviewCraft(sendTask.asunto, sendTask.cuerpo);
+      setGuardianNote(`${verdict.summary} — ${verdict.detail}`);
+      if (verdict.status === "BLOQUEAR" && !useDemo) {
+        toast(verdict.summary, "err");
+        return;
+      }
+      if (verdict.status === "BLOQUEAR" && useDemo) {
+        toast(`${verdict.summary} · DEMO continúa`, "warn");
+      } else if (verdict.status === "OK") {
+        toast(verdict.summary, "ok");
+      }
+    }
     const data = await act(sendId, "enviar", useDemo ? { demo: true } : {});
     if (data) {
-      toast(data.message || "Envío registrado", useDemo ? "warn" : "ok");
+      toast(
+        (data.message || "Envío registrado") +
+          (pasarGuardian ? " · Guardian revisó" : ""),
+        useDemo ? "warn" : "ok"
+      );
       setSendId(null);
+      setGuardianNote(null);
       await refresh();
     }
   }
 
   async function onAgendar(id: string) {
-    const data = await act(id, "agendar");
-    if (data) {
-      toast("Visita agendada", "ok");
-      await refresh();
+    const calOk = Boolean(status?.outlook.calendarConnected);
+    const demoOn = demoMode || Boolean(status?.forceMockSend);
+    if (!calOk && !demoOn) {
+      setAgendaOpen(true);
+      toast("Conecta Agenda Outlook o activa Demo", "warn");
+      return;
     }
+    // Prefer real Graph when calendar is connected and Demo is OFF
+    const extra =
+      calOk && !demoOn ? {} : ({ demo: true } as Record<string, boolean>);
+    const data = await act(id, "agendar", extra);
+    if (!data) return;
+    const isDemoMsg =
+      typeof data.message === "string" &&
+      String(data.message).includes("DEMO");
+    toast(
+      data.message ||
+        (isDemoMsg ? "DEMO: bloqueado en agenda" : "Visita agendada"),
+      isDemoMsg ? "warn" : "ok"
+    );
+    await refresh();
   }
 
   async function resetDemo() {
@@ -342,6 +382,7 @@ export function HoyClient({
           status={status}
           demoMode={demoMode}
           onOpenOutlook={() => setOutlookOpen(true)}
+          onOpenAgenda={() => setAgendaOpen(true)}
           onOpenWhatsApp={() => setWaOpen(true)}
           onSimularLlamada={onSimularLlamada}
           onConfirmarVisita={onConfirmarVisita}
@@ -355,9 +396,16 @@ export function HoyClient({
             label="Outlook"
           />
           <StatusBadge
+            connected={Boolean(status?.outlook.calendarConnected)}
+            label="Agenda"
+          />
+          <StatusBadge
             connected={Boolean(status?.whatsapp.connected)}
             label="WhatsApp"
           />
+          <Link href="/agenda" className="text-xs underline text-navy/60">
+            Ver agenda →
+          </Link>
           <Link href="/agentes" className="text-xs underline text-navy/60">
             Hablar con agentes →
           </Link>
@@ -430,6 +478,11 @@ export function HoyClient({
                       <Badge>{t.programaFoco}</Badge>
                       <Badge tone={t.estado}>{ESTADO_LABEL[t.estado]}</Badge>
                       <Badge>{t.creadoPorAgente}</Badge>
+                      <ScoreBadge
+                        score={scoreFromTareaText(
+                          `${t.titulo} ${t.dest} ${t.programaFoco}`
+                        )}
+                      />
                     </div>
                   </div>
                 </div>
@@ -647,6 +700,25 @@ export function HoyClient({
               <br />
               Canal: {CANAL_LABEL[sendTask.canal]} · Para: {sendTask.dest}
             </p>
+            <label className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-cream px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={pasarGuardian}
+                onChange={(e) => setPasarGuardian(e.target.checked)}
+              />
+              <span>
+                <strong>Pasar por Guardian</strong>
+                <span className="block text-xs text-navy/55">
+                  Revisión demo OK / BLOQUEAR antes de enviar o simular.
+                </span>
+              </span>
+            </label>
+            {guardianNote && (
+              <p className="mt-2 rounded-lg border border-border bg-[#eef2f8] px-3 py-2 text-xs leading-relaxed">
+                {guardianNote}
+              </p>
+            )}
             <p className="mt-3 text-xs text-navy/60">{sendHint(sendTask.canal)}</p>
           </>
         )}
@@ -657,6 +729,12 @@ export function HoyClient({
           <OutlookConnectModal
             open={outlookOpen}
             onClose={() => setOutlookOpen(false)}
+            status={status}
+            onChanged={refreshConnections}
+          />
+          <AgendaConnectModal
+            open={agendaOpen}
+            onClose={() => setAgendaOpen(false)}
             status={status}
             onChanged={refreshConnections}
           />

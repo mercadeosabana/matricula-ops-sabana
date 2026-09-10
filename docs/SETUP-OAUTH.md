@@ -1,4 +1,4 @@
-# Setup OAuth · Outlook + WhatsApp
+# Setup OAuth · Outlook (email + agenda) + WhatsApp
 
 Guía para **Ivan / TI** antes de conectar canales reales en Matrícula Ops  
 (app: `https://matricula-ops-sabana.vercel.app`).
@@ -7,7 +7,7 @@ No se inventan secretos aquí: hay que crearlos en Azure y Meta y pegarlos en Ve
 
 ---
 
-## 1. Outlook / Microsoft 365 (Graph Mail.Send)
+## 1. Outlook / Microsoft 365 (Graph Mail.Send + Calendars.ReadWrite)
 
 ### En Azure Portal (Entra ID)
 
@@ -28,8 +28,14 @@ No se inventan secretos aquí: hay que crearlos en Azure y Meta y pegarlos en Ve
 3. **API permissions** → *Microsoft Graph* → *Delegated*:
    - `User.Read`
    - `Mail.Send`
+   - `Calendars.ReadWrite` ← **agenda / visitas** (mismo OAuth que el correo)
    - `offline_access` (aparece al pedir consentimiento / scope; también se pide en el authorize URL)
    - Grant admin consent si la política de la universidad lo exige.
+
+   Un solo flujo OAuth (`/api/oauth/outlook/start`) pide correo **y** calendario.
+   En la UI hay tarjeta **Agenda Outlook** («Conectar agenda»); si el correo
+   ya estaba conectado sin `Calendars.ReadWrite`, hay que **reconectar** para
+   conceder el permiso extra.
 
 4. Anotar:
    - **Application (client) ID** → `AZURE_CLIENT_ID`
@@ -55,11 +61,22 @@ Si faltan variables, la UI muestra:
 
 > *Faltan credenciales de Azure — pedir a TI / Ivan*
 
-con checklist (App registration, redirect URI, Mail.Send + offline_access + User.Read).
+con checklist (App registration, redirect URI, Mail.Send + Calendars.ReadWrite + offline_access + User.Read).
 
 Los tokens se guardan cifrados en el store JSON bajo `/tmp` (mismo patrón que `store.json` en Vercel).
 
 ---
+
+
+### Agenda / visitas (Graph calendar)
+
+- Scope: `Calendars.ReadWrite` (incluido en el authorize URL junto a Mail.Send).
+- Flag en store: `calendarConnected` si el token trae ese scope.
+- «Agendar visita» en Hoy:
+  - Con agenda conectada → `POST /me/events` (plantilla 2 h campus Chía, sábados 9:00–11:00 America/Bogota; attendee = email del lead si existe).
+  - Sin Azure / modo DEMO → simula y deja en Actividad: **DEMO: bloqueado en agenda**.
+  - Sin conexión y sin DEMO → abre modal «Conectar Agenda Outlook».
+- Lista local: `/agenda` + `GET /api/agenda`.
 
 ## 2. WhatsApp Business Cloud API (Meta)
 
@@ -94,6 +111,7 @@ Si faltan credenciales, la UI muestra checklist (Meta Business, número facultad
 | Canal | Sin conexión | Con conexión | `FORCE_MOCK_SEND=1` |
 |-------|--------------|--------------|---------------------|
 | Email | Bloquea: *Conecta Outlook primero* | Graph `sendMail` (o cola si no hay email en destino) | Mock |
+| Agenda / visita | Modal conectar o DEMO | Graph `me/events` (Calendars.ReadWrite) | DEMO: bloqueado en agenda |
 | WhatsApp | Bloquea: *Conecta WhatsApp primero* | Cloud API (o cola si no hay teléfono) | Mock |
 | Teléfono | Marca lista | Marca lista | Mock |
 
@@ -110,9 +128,10 @@ http://localhost:3000/api/oauth/outlook/callback
 
 Endpoints de la app:
 
-- `GET /api/oauth/outlook/start`
+- `GET /api/oauth/outlook/start` (scopes: Mail.Send + Calendars.ReadWrite + …)
 - `GET /api/oauth/outlook/callback`
 - `GET /api/connections`
+- `GET /api/agenda`
 - `POST /api/connections/whatsapp`
 - `DELETE /api/connections/whatsapp`
 - `POST /api/connections/outlook/disconnect`
@@ -123,10 +142,11 @@ Endpoints de la app:
 
 - [ ] App registration Azure + secret
 - [ ] Redirect URI de producción en Azure
-- [ ] Permisos Graph: Mail.Send, User.Read, offline_access (+ admin consent si aplica)
+- [ ] Permisos Graph: Mail.Send, Calendars.ReadWrite, User.Read, offline_access (+ admin consent si aplica)
 - [ ] Env vars Azure + `NEXT_PUBLIC_APP_URL` en Vercel
 - [ ] Meta Business facultad + número Cloud API
 - [ ] Env vars WhatsApp en Vercel (o pegarlas en la UI de Mercadeo)
 - [ ] Redeploy Vercel
-- [ ] Probar login Laura Natalia → Conectar Outlook / WhatsApp → badges *Conectado*
+- [ ] Probar login Laura Natalia → Conectar Outlook / Agenda / WhatsApp → badges *Conectado*
+- [ ] Probar «Agendar visita» en Hoy → evento en `/agenda` (real o DEMO)
 - [ ] **No** poner `FORCE_MOCK_SEND=1` en producción si se quiere envío real

@@ -105,6 +105,9 @@ export function AppShell({
               <NavLink href="/actividad" active={pathname === "/actividad"}>
                 Actividad
               </NavLink>
+              <NavLink href="/agenda" active={pathname === "/agenda"}>
+                Agenda
+              </NavLink>
               <NavLink href="/agentes" active={pathname === "/agentes"}>
                 Agentes
               </NavLink>
@@ -127,6 +130,9 @@ export function AppShell({
               <NavLink href="/actividad" active={pathname === "/actividad"}>
                 Actividad
               </NavLink>
+              <NavLink href="/agenda" active={pathname === "/agenda"}>
+                Agenda
+              </NavLink>
               <NavLink href="/agentes" active={pathname === "/agentes"}>
                 Agentes
               </NavLink>
@@ -145,6 +151,9 @@ export function AppShell({
               </MobileTab>
               <MobileTab href="/actividad" active={pathname === "/actividad"}>
                 Actividad
+              </MobileTab>
+              <MobileTab href="/agenda" active={pathname === "/agenda"}>
+                Agenda
               </MobileTab>
               <MobileTab href="/agentes" active={pathname === "/agentes"}>
                 Agentes
