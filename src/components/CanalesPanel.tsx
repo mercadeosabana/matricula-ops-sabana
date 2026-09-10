@@ -81,8 +81,8 @@ export function CanalesPanel({
           )}
         </div>
 
-        {/* Primary: Outlook + WhatsApp */}
-        <div className="grid gap-2 sm:grid-cols-2">
+        {/* Primary: Outlook + WhatsApp + LinkedIn (borradores) */}
+        <div className="grid gap-2 sm:grid-cols-3">
           <button
             type="button"
             onClick={onOpenOutlook}
@@ -131,18 +131,25 @@ export function CanalesPanel({
                   : "Conectar"}
             </div>
           </button>
-        </div>
-
-        {/* Secondary row */}
-        <div className="mt-2 grid gap-2 sm:grid-cols-3">
           <button
             type="button"
             onClick={() => setLiOpen(true)}
-            className="rounded-lg border border-navy/15 bg-[#eef2f8] p-3 text-left hover:border-navy/35"
+            className="rounded-lg border-2 border-[#0A66C2]/45 bg-[#eef2f8] p-3 text-left transition hover:border-[#0A66C2]/70"
           >
-            <div className="text-sm font-semibold">LinkedIn</div>
-            <div className="mt-1 text-xs text-navy/60">Solo borradores</div>
+            <div className="text-sm font-semibold text-navy">
+              LinkedIn · borradores
+            </div>
+            <div className="mt-0.5 text-[11px] text-navy/55">
+              Ver textos · NO se conecta la cuenta (copiar/pegar en LinkedIn)
+            </div>
+            <div className="mt-2 text-xs font-medium text-[#0A66C2]">
+              Abrir borradores
+            </div>
           </button>
+        </div>
+
+        {/* Secondary row */}
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => (onOpenAgenda ? onOpenAgenda() : onOpenOutlook())}
@@ -251,9 +258,16 @@ export function CanalesPanel({
           </button>
         }
       >
-        <p className="m-0 text-sm text-navy/70">
-          No hay envío automático. Los agentes preparan borradores; tú copias y
-          pegas tras aprobar.
+        <div className="rounded-lg border border-[#0A66C2]/25 bg-[#eef2f8] px-3 py-2.5">
+          <p className="m-0 text-sm text-navy/80">
+            <strong>No hay «Conectar»:</strong> LinkedIn no permite envío
+            automático seguro. Natalia aprueba el texto y lo pega ella en
+            LinkedIn.
+          </p>
+        </div>
+        <p className="m-0 mt-3 text-sm text-navy/70">
+          Los agentes preparan borradores; tú copias y pegas tras aprobar. Sin
+          OAuth ni envío desde Matrícula Ops.
         </p>
         <div className="mt-3 flex flex-col gap-3">
           {LINKEDIN_DRAFTS.map((d) => (
