@@ -11,7 +11,9 @@ import {
 } from "./seed-data";
 import type { ActividadItem, TareaHoy } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.VERCEL
+  ? path.join("/tmp", "matricula-ops-data")
+  : path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "matricula.sqlite");
 const WASM_PATH = path.join(
   process.cwd(),
