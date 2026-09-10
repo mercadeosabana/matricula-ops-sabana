@@ -418,6 +418,21 @@ export type ZonaMapa = {
   prioridad: PrioridadComercial;
   docentesEstimado: number | null;
   docentesNota: string;
+  /** ESTIMADO · docentes/alumnos potenciales interesados en maestría */
+  alumnosPotenciales: number | null;
+  alumnosNota: string;
+  /** ESTIMADO · rectores / coordinadores con agenda de posgrado */
+  directivosInteresados: number | null;
+  directivosNota: string;
+  /** ESTIMADO · colegios que pueden pagar / cofinanciar cupos */
+  financiadoresColegios: number | null;
+  /** ESTIMADO · secretarías certificadas + alcaldías con cupos */
+  financiadoresPublicos: number | null;
+  financiadoresNota: string;
+  /** Ofertas Unisabana para presentarse a financiadores (ángulo biblioteca) */
+  ofertasUnisabana: string[];
+  /** Competencia principal nombrada (desde COMPETENCIA / competenciaLocal) */
+  competenciaPrincipal: { nombre: string; nota: string }[];
   ciudadesAncla: string[];
   competenciaLocal: string[];
   mensajeComercial: string;
@@ -433,6 +448,41 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "alta",
     docentesEstimado: 95_000,
     docentesNota: "ESTIMADO · subset del universo DANE concentrado en región capital (orden de magnitud).",
+    alumnosPotenciales: 11_000,
+    alumnosNota:
+      "ESTIMADO · ~11–12% del pool docente regional con potencial de maestría Educación/Pedagogía/DI en 3 años.",
+    directivosInteresados: 2_400,
+    directivosNota:
+      "ESTIMADO · rectores y coordinadores Bogotá norte + sabana (Chía/Cajicá/Zipa) con agenda de gestión.",
+    financiadoresColegios: 920,
+    financiadoresPublicos: 38,
+    financiadoresNota:
+      "ESTIMADO · colegios privados/alianzas que compran cupos + SED Bogotá, Secretaría Cundinamarca y alcaldías ancla.",
+    ofertasUnisabana: [
+      "Convenio de cupos institucionales con colegios sabana y Bogotá norte (biblioteca · convenio territorial).",
+      "Early bird institucional [CONFIRMAR: 15%] hasta [CONFIRMAR: 15 oct 2026] para paquetes de cupos.",
+      "Desayuno / visita campus Chía 2 h · sábados [CONFIRMAR: 20 y 27 sep] 9:00–11:00.",
+      "Cohorte presencial campus Chía · puerta de entrada natural para financiadores de la región capital.",
+      "One-pagers de las 4 maestrías (Educación, Pedagogía, Dirección y Gestión, DI) · copiar desde /biblioteca.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "Universidad de los Andes",
+        nota: "Semipresencial · marca premium y red alumni; Sabana compite con cercanía a colegios de sabana.",
+      },
+      {
+        nombre: "Universidad Libre",
+        nota: "Modalidad por confirmar · presencia amplia en Bogotá; Sabana diferencia calidad y acompañamiento.",
+      },
+      {
+        nombre: "Universidad Cooperativa de Colombia (UCC)",
+        nota: "Por confirmar · red multi-sede; Sabana apuesta por selectividad y colegios premium.",
+      },
+      {
+        nombre: "Universidad de La Sabana",
+        nota: "Presencial Chía · nosotros; ancla de marca y desayunos con colegios.",
+      },
+    ],
     ciudadesAncla: ["Bogotá", "Chía", "Cajicá", "Zipaquirá"],
     competenciaLocal: ["Uniandes", "Unilibre", "UCC", "Unisabana (nosotros)"],
     mensajeComercial: "Corazón de la cohorte · campus Chía + colegios sabana + directivos Bogotá norte.",
@@ -445,6 +495,37 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "alta",
     docentesEstimado: 12_000,
     docentesNota: "ESTIMADO · docentes departamento; foco comercial Neiva + Secretaría.",
+    alumnosPotenciales: 1_800,
+    alumnosNota:
+      "ESTIMADO · docentes Neiva/Huila con interés real en cohorte regional 2027-1 (semana activa).",
+    directivosInteresados: 420,
+    directivosNota:
+      "ESTIMADO · rectores y coordinadores Neiva + municipios cercanos; pipeline corto pero caliente.",
+    financiadoresColegios: 85,
+    financiadoresPublicos: 6,
+    financiadoresNota:
+      "ESTIMADO · colegios Neiva con presupuesto de formación + Secretaría de Educación Huila / Alcaldía Neiva (foco cupos).",
+    ofertasUnisabana: [
+      "Convenio territorial Secretaría Huila / Alcaldía Neiva · cupos preferentes planta y provisionales.",
+      "Early bird institucional [CONFIRMAR: 15%] en paquetes de cupos financiados hacia equilibrio 20.",
+      "Desayuno / visita campus Chía para líderes Neiva · o reunión 30 min en territorio [CONFIRMAR].",
+      "Cohorte regional Neiva 2027-1 · sede ejemplo en biblioteca (Chía + Neiva).",
+      "One-pager Educación / Pedagogía / Dirección · pieza de carta a financiador (Agente Región).",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "UNAD",
+        nota: "Virtual / distancia · alcance masivo y precio; Sabana diferencia presencialidad y networking.",
+      },
+      {
+        nombre: "UNIMINUTO",
+        nota: "Híbrida / multi-sede · asequibilidad; Sabana se posiciona medio-alto y liderazgos escolares.",
+      },
+      {
+        nombre: "IES regionales (verificar SNIES)",
+        nota: "Por confirmar · validar oferta vigente de maestría en educación antes del pitch.",
+      },
+    ],
     ciudadesAncla: ["Neiva"],
     competenciaLocal: ["IES regionales (verificar SNIES)", "Oferta virtual UNAD/UNIMINUTO"],
     mensajeComercial: "Semana activa · cupos financiados hacia equilibrio antes de escalar docentes.",
@@ -457,6 +538,31 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "media",
     docentesEstimado: 55_000,
     docentesNota: "ESTIMADO · orden de magnitud regional.",
+    alumnosPotenciales: 5_500,
+    alumnosNota: "ESTIMADO · ~10% del pool docente regional con potencial de maestría en horizonte 3 años.",
+    directivosInteresados: 1_100,
+    directivosNota: "ESTIMADO · directivos Medellín / Envigado / Rionegro; ola 2 tras Andina centro y Huila.",
+    financiadoresColegios: 420,
+    financiadoresPublicos: 22,
+    financiadoresNota:
+      "ESTIMADO · colegios privados Aburrá + Secretaría Antioquia / alcaldías ancla; abrir solo con 1 financiador.",
+    ofertasUnisabana: [
+      "Convenio de cupos con 1 colegio ancla o Secretaría antes de abrir lista masiva.",
+      "Early bird institucional [CONFIRMAR: 15%] para paquetes · sin inventar tarifa fuera de [CONFIRMAR].",
+      "Desayuno campus Chía para rectores selectos (viaje justificado) · agenda 2 h biblioteca.",
+      "One-pagers Dirección y Gestión + Educación · mensaje calidad Sabana vs IES locales.",
+      "No abrir cohorte regional Antioquia en 2027-1 sin lista corta y financiador cerrado.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "U. de Antioquia / EAFIT / UPB",
+        nota: "Verificar maestrías educación vigentes · competencia local de prestigio; no pelear solo precio.",
+      },
+      {
+        nombre: "UNAD",
+        nota: "Virtual · cobertura; Sabana diferencia campus y relación con colegios.",
+      },
+    ],
     ciudadesAncla: ["Medellín", "Envigado", "Rionegro"],
     competenciaLocal: ["U. de Antioquia / EAFIT / UPB (verificar maestrías educación)", "UNAD"],
     mensajeComercial: "Ola 2 · directivos y colegios privados; no abrir sin lista y 1 financiador ancla.",
@@ -469,6 +575,34 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "media",
     docentesEstimado: 35_000,
     docentesNota: "ESTIMADO.",
+    alumnosPotenciales: 3_500,
+    alumnosNota: "ESTIMADO · docentes Cali/Palmira con potencial de posgrado Educación.",
+    directivosInteresados: 700,
+    directivosNota: "ESTIMADO · líderes de colegios privados Cali; entrada selectiva.",
+    financiadoresColegios: 280,
+    financiadoresPublicos: 16,
+    financiadoresNota:
+      "ESTIMADO · colegios que cofinancian + Secretaría Valle / Alcaldía Cali (pocos contactos iniciales).",
+    ofertasUnisabana: [
+      "Convenio colegios privados Cali · cupos institucionales (biblioteca convenio).",
+      "Early bird institucional [CONFIRMAR: 15%] · inversión referencial solo con etiqueta [CONFIRMAR].",
+      "Visita / desayuno campus Chía para directivos calientes · no abrir sede sin SNIES competencia clara.",
+      "One-pagers Educación y Pedagogía · confirmar Univalle/USC vigentes antes del pitch.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "Universidad del Valle",
+        nota: "Por confirmar · pública de alto prestigio; Sabana compite en servicio y convenios privados.",
+      },
+      {
+        nombre: "Universidad Santiago de Cali",
+        nota: "Por confirmar · verificar SNIES activo de maestría en educación.",
+      },
+      {
+        nombre: "UNAD",
+        nota: "Virtual · precio/alcance; Sabana diferencia presencialidad y marca.",
+      },
+    ],
     ciudadesAncla: ["Cali", "Palmira"],
     competenciaLocal: ["Univalle", "Santiago de Cali (verificar)", "UNAD"],
     mensajeComercial: "Entrada selectiva · convenios colegios; confirmar competencia SNIES antes del pitch.",
@@ -481,6 +615,34 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "media",
     docentesEstimado: 28_000,
     docentesNota: "ESTIMADO · Atlántico + área metropolitana Barranquilla.",
+    alumnosPotenciales: 2_800,
+    alumnosNota: "ESTIMADO · docentes área Barranquilla con potencial cohorte digital/híbrida de contacto.",
+    directivosInteresados: 560,
+    directivosNota: "ESTIMADO · directivos Caribe; semana 9 del plan · lista corta.",
+    financiadoresColegios: 210,
+    financiadoresPublicos: 12,
+    financiadoresNota:
+      "ESTIMADO · colegios Barranquilla + Secretaría Atlántico / Alcaldía; meta 1 financiador ancla.",
+    ofertasUnisabana: [
+      "Convenio territorial suave · 1 financiador Caribe (carta biblioteca Región).",
+      "Early bird institucional [CONFIRMAR: 15%] en pie de pieza hasta [CONFIRMAR: 15 oct].",
+      "Invitación a desayuno campus Chía para 4–6 líderes (viaje selectivo).",
+      "One-pagers Educación + Dirección · mensaje marca nacional vs ancla CUC.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "Universidad de la Costa (CUC)",
+        nota: "Por confirmar · ancla Caribe; Sabana llega con marca nacional y convenios.",
+      },
+      {
+        nombre: "UNAD",
+        nota: "Virtual · masivo; no pelear solo precio.",
+      },
+      {
+        nombre: "UNIMINUTO",
+        nota: "Híbrida · cobertura; Sabana segmento medio-alto.",
+      },
+    ],
     ciudadesAncla: ["Barranquilla"],
     competenciaLocal: ["CUC", "UNAD", "UNIMINUTO"],
     mensajeComercial: "Semana 9 del plan · lista corta + 1 financiador; no saturar sin equilibrio en Huila.",
@@ -493,6 +655,34 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "media",
     docentesEstimado: 22_000,
     docentesNota: "ESTIMADO.",
+    alumnosPotenciales: 2_200,
+    alumnosNota: "ESTIMADO · docentes Bucaramanga/Floridablanca con potencial de maestría.",
+    directivosInteresados: 440,
+    directivosNota: "ESTIMADO · semana 11 · 20 directivos meta de contacto.",
+    financiadoresColegios: 160,
+    financiadoresPublicos: 10,
+    financiadoresNota:
+      "ESTIMADO · colegios área metropolitana + Secretaría Santander; meta 2 colegios financiadores.",
+    ofertasUnisabana: [
+      "Convenio 2 colegios ancla · cupos Dirección y Gestión / Educación.",
+      "Early bird institucional [CONFIRMAR: 15%] · mensaje calidad Sabana vs red multi-sede.",
+      "Desayuno campus Chía para rectores BGA · agenda biblioteca visita 2 h.",
+      "One-pagers · verificar oferta UNAB vigente antes de claims comerciales.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "Universidad Cooperativa de Colombia (UCC)",
+        nota: "Por confirmar · competencia local de red; oportunidad vía directivos.",
+      },
+      {
+        nombre: "Universidad Autónoma de Bucaramanga (UNAB)",
+        nota: "Por confirmar · marca regional; verificar maestría educación vigente.",
+      },
+      {
+        nombre: "UNAD",
+        nota: "Virtual · cobertura nacional.",
+      },
+    ],
     ciudadesAncla: ["Bucaramanga", "Floridablanca"],
     competenciaLocal: ["UCC", "UNAB (verificar)", "UNAD"],
     mensajeComercial: "Semana 11 · directivos y colegios; mensaje calidad Sabana vs red multi-sede.",
@@ -505,6 +695,29 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "baja",
     docentesEstimado: 18_000,
     docentesNota: "ESTIMADO · Caldas / Risaralda / Quindío agregado.",
+    alumnosPotenciales: 1_500,
+    alumnosNota: "ESTIMADO · pool agregado; cola del elefante si sobra capacidad.",
+    directivosInteresados: 300,
+    directivosNota: "ESTIMADO · Pereira/Manizales/Armenia; no priorizar cohorte actual.",
+    financiadoresColegios: 110,
+    financiadoresPublicos: 9,
+    financiadoresNota:
+      "ESTIMADO · pocos contactos iniciales; solo si sobra capacidad tras Andina/Caribe.",
+    ofertasUnisabana: [
+      "One-pagers genéricos de biblioteca · sin abrir convenio regional aún.",
+      "Early bird [CONFIRMAR: 15%] en piezas digitales si hay inbound espontáneo.",
+      "Visita campus Chía bajo demanda · no planificar desayunos masivos aquí.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "U. locales + virtuales",
+        nota: "Por confirmar · oferta local dispersa; UNAD/UNIMINUTO cubren distancia.",
+      },
+      {
+        nombre: "UNAD",
+        nota: "Virtual · principal alternativa de alcance.",
+      },
+    ],
     ciudadesAncla: ["Pereira", "Manizales", "Armenia"],
     competenciaLocal: ["U. locales + virtuales"],
     mensajeComercial: "Cola del elefante · solo si sobra capacidad tras Andina/Caribe.",
@@ -517,6 +730,27 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "baja",
     docentesEstimado: null,
     docentesNota: "N/D · sin estimación comercial firme aún.",
+    alumnosPotenciales: 600,
+    alumnosNota: "ESTIMADO exploratorio · Villavicencio y municipios; sin pipeline 2027-1.",
+    directivosInteresados: 80,
+    directivosNota: "ESTIMADO · muy bajo volumen comercial actual.",
+    financiadoresColegios: 25,
+    financiadoresPublicos: 4,
+    financiadoresNota: "ESTIMADO · exploratorio; no priorizar secretarías en cohorte actual.",
+    ofertasUnisabana: [
+      "One-pager Educación (biblioteca) solo si hay inbound · sin promesa de cohorte regional.",
+      "Early bird genérico [CONFIRMAR: 15%] en pieza digital · sin tarifa inventada.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "UNAD",
+        nota: "Virtual · oferta dominante por distancia.",
+      },
+      {
+        nombre: "Oferta virtual (otras IES)",
+        nota: "Por confirmar · no abrir frente comercial sin lista.",
+      },
+    ],
     ciudadesAncla: ["Villavicencio"],
     competenciaLocal: ["UNAD", "oferta virtual"],
     mensajeComercial: "Exploratorio · no priorizar en cohorte 2027-1.",
@@ -529,6 +763,22 @@ export const ZONAS_MAPA: ZonaMapa[] = [
     prioridad: "baja",
     docentesEstimado: null,
     docentesNota: "N/D.",
+    alumnosPotenciales: null,
+    alumnosNota: "N/D · fuera de foco cohorte 2027-1.",
+    directivosInteresados: null,
+    directivosNota: "N/D.",
+    financiadoresColegios: null,
+    financiadoresPublicos: null,
+    financiadoresNota: "N/D · sin abordaje comercial previsto.",
+    ofertasUnisabana: [
+      "Sin oferta activa · redirigir a canales digitales nacionales solo si hay inbound.",
+    ],
+    competenciaPrincipal: [
+      {
+        nombre: "UNAD",
+        nota: "Virtual · única referencia práctica de alcance.",
+      },
+    ],
     ciudadesAncla: [],
     competenciaLocal: ["UNAD"],
     mensajeComercial: "Fuera de foco cohorte actual.",

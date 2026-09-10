@@ -87,3 +87,18 @@ button {
 .toast.err {
   background: var(--danger);
 }
+
+/* Mapa estudio: pulse suave en región seleccionada */
+@keyframes mapa-region-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.65;
+  }
+}
+
+.mapa-region-pulse {
+  animation: mapa-region-pulse 1.6s ease-in-out 2;
+}
