@@ -155,7 +155,7 @@ export function AgentesClient() {
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`max-w-[92%] rounded-lg px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[92%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
                   msg.role === "user"
                     ? "ml-auto bg-navy text-white"
                     : "mr-auto border border-border bg-cream text-navy"
