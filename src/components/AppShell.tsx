@@ -102,18 +102,30 @@ export function AppShell({
               <NavLink href="/hoy" active={pathname === "/hoy"}>
                 Hoy
               </NavLink>
-              <NavLink href="/actividad" active={pathname === "/actividad"}>
-                Actividad
+              <NavLink href="/crm" active={pathname === "/crm"}>
+                CRM
+              </NavLink>
+              <NavLink href="/post-visita" active={pathname === "/post-visita"}>
+                Post-visita
+              </NavLink>
+              <NavLink href="/biblioteca" active={pathname === "/biblioteca"}>
+                Biblioteca
+              </NavLink>
+              <NavLink href="/capacidad" active={pathname === "/capacidad"}>
+                Capacidad
+              </NavLink>
+              <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
+                Sala de guerra
               </NavLink>
               <NavLink href="/agenda" active={pathname === "/agenda"}>
                 Agenda
               </NavLink>
+              <NavLink href="/actividad" active={pathname === "/actividad"}>
+                Actividad
+              </NavLink>
               <NavLink href="/agentes" active={pathname === "/agentes"}>
                 Agentes
               </NavLink>
-              <span className="block cursor-not-allowed rounded-lg px-3 py-2 text-sm text-navy/35">
-                Colegios
-              </span>
               <button
                 type="button"
                 onClick={() => setOutlookOpen(true)}
@@ -127,11 +139,23 @@ export function AppShell({
               <NavLink href="/direccion" active={pathname === "/direccion"}>
                 Dashboard
               </NavLink>
-              <NavLink href="/actividad" active={pathname === "/actividad"}>
-                Actividad
+              <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
+                Sala de guerra
+              </NavLink>
+              <NavLink href="/capacidad" active={pathname === "/capacidad"}>
+                Capacidad
+              </NavLink>
+              <NavLink href="/crm" active={pathname === "/crm"}>
+                CRM
+              </NavLink>
+              <NavLink href="/biblioteca" active={pathname === "/biblioteca"}>
+                Biblioteca
               </NavLink>
               <NavLink href="/agenda" active={pathname === "/agenda"}>
                 Agenda
+              </NavLink>
+              <NavLink href="/actividad" active={pathname === "/actividad"}>
+                Actividad
               </NavLink>
               <NavLink href="/agentes" active={pathname === "/agentes"}>
                 Agentes
@@ -149,11 +173,11 @@ export function AppShell({
               <MobileTab href="/hoy" active={pathname === "/hoy"}>
                 Hoy
               </MobileTab>
-              <MobileTab href="/actividad" active={pathname === "/actividad"}>
-                Actividad
+              <MobileTab href="/crm" active={pathname === "/crm"}>
+                CRM
               </MobileTab>
-              <MobileTab href="/agenda" active={pathname === "/agenda"}>
-                Agenda
+              <MobileTab href="/sala-guerra" active={pathname === "/sala-guerra"}>
+                Guerra
               </MobileTab>
               <MobileTab href="/agentes" active={pathname === "/agentes"}>
                 Agentes
@@ -164,14 +188,14 @@ export function AppShell({
               <MobileTab href="/direccion" active={pathname === "/direccion"}>
                 Dashboard
               </MobileTab>
-              <MobileTab href="/actividad" active={pathname === "/actividad"}>
-                Actividad
+              <MobileTab href="/sala-guerra" active={pathname === "/sala-guerra"}>
+                Guerra
+              </MobileTab>
+              <MobileTab href="/capacidad" active={pathname === "/capacidad"}>
+                Cupos
               </MobileTab>
               <MobileTab href="/agentes" active={pathname === "/agentes"}>
                 Agentes
-              </MobileTab>
-              <MobileTab href="/hoy" active={pathname === "/hoy"}>
-                Hoy
               </MobileTab>
             </>
           )}
