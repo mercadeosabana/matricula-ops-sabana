@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -67,6 +68,41 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Demo aprobación producto — sin login */}
+        <div className="mb-5 rounded-[12px] border-2 border-navy bg-cream-card p-4 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gold">
+            Demo aprobación · sin login
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-navy/65">
+            Para Laura Natalia y Laura Lucía · una pantalla cada una. Sin
+            Azure / WhatsApp.
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            <Link
+              href="/mi-dia"
+              className="flex min-h-12 items-center justify-between rounded-lg bg-navy px-4 text-sm font-semibold text-white"
+              style={{ color: "#fff" }}
+            >
+              <span>Ver demo Natalia (Mi día)</span>
+              <span aria-hidden>→</span>
+            </Link>
+            <Link
+              href="/como-vamos"
+              className="flex min-h-12 items-center justify-between rounded-lg border-2 border-navy bg-white px-4 text-sm font-semibold text-navy"
+            >
+              <span>Ver demo Lucía (Cómo vamos)</span>
+              <span aria-hidden>→</span>
+            </Link>
+          </div>
+          <p className="mt-2 text-center text-[11px] text-navy/45">
+            También:{" "}
+            <a href="/demo-aprobacion.html" className="underline">
+              /demo-aprobacion.html
+            </a>{" "}
+            (fallback HTML)
+          </p>
+        </div>
+
         <form
           onSubmit={onSubmit}
           className="rounded-[12px] border border-border bg-cream-card p-5 shadow-sm"
@@ -115,7 +151,7 @@ export default function LoginPage() {
 
         <div className="mt-5 rounded-[10px] border border-dashed border-border bg-cream-card/80 p-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-navy/50">
-            Entrar demo rápido
+            Entrar demo rápido (UI completa)
           </div>
           <div className="mt-2 flex flex-col gap-2">
             <button
@@ -126,17 +162,17 @@ export default function LoginPage() {
             >
               {demoLoading === "u-mercadeo"
                 ? "Entrando…"
-                : "Laura Natalia · Mercadeo (Hoy)"}
+                : "Laura Natalia · Mercadeo (/hoy)"}
             </button>
             <button
               type="button"
               disabled={!!demoLoading}
               onClick={() => demoRapido("u-direccion", "direccion")}
-              className="min-h-11 rounded-lg border-2 border-navy bg-white px-3 text-left text-sm disabled:opacity-60"
+              className="min-h-11 rounded-lg border border-border bg-white px-3 text-left text-sm disabled:opacity-60"
             >
               {demoLoading === "u-direccion"
                 ? "Entrando…"
-                : "Laura Lucía · Dirección"}
+                : "Laura Lucía · Dirección (/direccion)"}
             </button>
             <button
               type="button"

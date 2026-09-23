@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Demo aprobación · Matrícula Ops Sabana</title>
+  <style>
+    :root {
+      --navy: #1a2b4a;
+      --navy-mid: #243b5c;
+      --cream: #f7f3ea;
+      --cream-card: #fffdf8;
+      --gold: #c4a35a;
+      --border: #e2d9c8;
+      --ok: #2d6a4f;
+      --warn: #9a6b2f;
+      --danger: #9b2c2c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--cream);
+      color: var(--navy);
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    button { font-family: inherit; cursor: pointer; }
+    .tabs {
+      position: sticky; top: 0; z-index: 40;
+      display: flex; gap: 0; background: var(--navy);
+      border-bottom: 2px solid var(--gold);
+    }
+    .tabs button {
+      flex: 1; min-height: 48px; border: 0; background: transparent;
+      color: rgba(255,255,255,.65); font-size: 14px; font-weight: 600;
+    }
+    .tabs button.active { color: #fff; background: var(--navy-mid); box-shadow: inset 0 -3px 0 var(--gold); }
+    .screen { display: none; max-width: 480px; margin: 0 auto; padding-bottom: 48px; }
+    .screen.active { display: block; }
+    header.demo {
+      background: var(--navy); color: #fff; padding: 14px 16px;
+    }
+    header.demo .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+    header.demo h1 { margin: 4px 0 0; font-size: 18px; }
+    header.demo p { margin: 6px 0 0; font-size: 12px; color: rgba(255,255,255,.75); }
+    main { padding: 16px; }
+    .card {
+      background: var(--cream-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 12px;
+      box-shadow: 0 1px 2px rgba(26,43,74,.04);
+    }
+    .card.muted { opacity: .7; }
+    .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .name { font-weight: 650; line-height: 1.25; }
+    .sub { font-size: 12px; color: rgba(26,43,74,.55); margin-top: 2px; }
+    .why { font-size: 14px; line-height: 1.35; margin: 10px 0 0; color: rgba(26,43,74,.85); }
+    .preview {
+      margin-top: 8px; padding: 10px 12px; background: #fff; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 13px; line-height: 1.45; color: rgba(26,43,74,.75);
+    }
+    .badge {
+      flex-shrink: 0; font-size: 11px; font-weight: 650; padding: 2px 8px;
+      border-radius: 999px; border: 1px solid;
+    }
+    .badge.correo { background: #f5e6c8; color: var(--warn); border-color: rgba(154,107,47,.3); }
+    .badge.wa { background: #e8f5ee; color: var(--ok); border-color: rgba(45,106,79,.25); }
+    .badge.li { background: #e8eef8; color: var(--navy); border-color: rgba(26,43,74,.2); }
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+    .btn {
+      min-height: 44px; border-radius: 8px; border: 0; font-size: 14px; font-weight: 650;
+      padding: 0 14px;
+    }
+    .btn.primary { flex: 1; background: var(--navy); color: #fff; }
+    .btn.ghost { background: #fff; border: 1px solid var(--border); color: var(--navy); }
+    .btn.full { width: 100%; }
+    .section-title { display: flex; align-items: flex-end; justify-content: space-between; margin: 8px 0 12px; }
+    .section-title h2 { margin: 0; font-size: 16px; }
+    .pill { background: rgba(26,43,74,.1); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 650; }
+    .pill.gold { background: rgba(196,163,90,.25); }
+    .next {
+      margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+      border: 1px solid rgba(196,163,90,.4); background: #fbf6ea;
+    }
+    .next .lab { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: rgba(26,43,74,.5); }
+    .footer-note { text-align: center; font-size: 11px; color: rgba(26,43,74,.45); line-height: 1.5; margin-top: 28px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .big { font-size: 28px; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .big span { font-size: 13px; font-weight: 500; color: rgba(26,43,74,.5); }
+    .bar { height: 10px; background: rgba(26,43,74,.1); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+    .bar > i { display: block; height: 100%; background: var(--navy); border-radius: 999px; }
+    .bar.gold > i { background: var(--gold); }
+    .bar.ok > i { background: var(--ok); }
+    .alert {
+      border: 2px solid rgba(154,107,47,.4); background: #fbf6ea;
+      border-radius: 12px; padding: 14px; margin-top: 8px;
+    }
+    .alert .lab { font-size: 11px; font-weight: 650; text-transform: uppercase; color: var(--warn); letter-spacing: .04em; }
+    .toast-wrap {
+      position: fixed; bottom: 20px; right: 16px; left: 16px; z-index: 100;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+      max-width: 360px; margin-left: auto;
+    }
+    .toast {
+      background: var(--ok); color: #fff; padding: 12px 16px; border-radius: 8px;
+      font-size: 14px; box-shadow: 0 8px 24px rgba(26,43,74,.25);
+    }
+    .edit-box { margin-top: 10px; }
+    .edit-box textarea {
+      width: 100%; min-height: 90px; border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; font: inherit; font-size: 13px;
+    }
+    .hidden { display: none !important; }
+    .agent { font-size: 11px; color: rgba(26,43,74,.45); margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="tabs" role="tablist">
+    <button type="button" class="active" data-tab="natalia" role="tab">Natalia · Mi día</button>
+    <button type="button" data-tab="lucia" role="tab">Lucía · Cómo vamos</button>
+  </div>
+
+  <!-- NATALIA -->
+  <div id="screen-natalia" class="screen active" role="tabpanel">
+    <header class="demo">
+      <div class="eyebrow">Matrícula Ops · Mi día</div>
+      <h1>Neiva · esta semana</h1>
+      <p>Meta: acercar cupos financiados hacia equilibrio (10)</p>
+    </header>
+    <main>
+      <div class="section-title">
+        <h2>Para aprobar hoy</h2>
+        <span class="pill" id="count-aprobar">8</span>
+      </div>
+      <div id="lista-aprobar"></div>
+
+      <div id="block-enviados" class="hidden">
+        <div class="section-title" style="margin-top:24px">
+          <h2>Enviados hoy</h2>
+          <span class="pill" id="count-enviados">0</span>
+        </div>
+        <div id="lista-enviados"></div>
+      </div>
+
+      <div class="section-title" style="margin-top:24px">
+        <h2>Respondieron — siguiente paso</h2>
+        <span class="pill gold" id="count-resp">3</span>
+      </div>
+      <div id="lista-respondieron"></div>
+
+      <p class="footer-note">
+        Los agentes (Captación, Región, Guardian) prepararon esto. Tú solo decides.
+      </p>
+    </main>
+  </div>
+
+  <!-- LUCÍA -->
+  <div id="screen-lucia" class="screen" role="tabpanel">
+    <header class="demo">
+      <div class="eyebrow">¿Cómo vamos? · Dirección</div>
+      <h1>Cohorte 2027-1</h1>
+      <p>Neiva / Huila · S2 · 8–14 sep 2026</p>
+    </header>
+    <main>
+      <div class="grid2">
+        <div class="card" style="margin:0">
+          <div class="sub" style="text-transform:uppercase;font-weight:650;letter-spacing:.04em">Inscritos vs meta</div>
+          <div class="big" style="margin-top:4px">14 <span>/ 80</span></div>
+          <div class="bar"><i style="width:18%"></i></div>
+          <p class="sub" style="margin-top:8px">Meta portfolio 20 × 4 maestrías</p>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="sub" style="text-transform:uppercase;font-weight:650;letter-spacing:.04em">Break-even</div>
+          <div class="big" style="margin-top:4px;color:var(--warn)">10 <span>/ programa</span></div>
+          <p class="sub" style="margin-top:10px">Portfolio: 14 de 40 cupos equilibrio</p>
+          <div class="bar gold"><i style="width:35%"></i></div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:22px"><h2>Por maestría</h2></div>
+      <div id="lista-programas"></div>
+
+      <div class="card" style="margin-top:8px">
+        <h2 style="margin:0;font-size:16px">Gasto vs avance</h2>
+        <p class="sub">Números demo · sin Azure aún</p>
+        <div style="margin-top:14px">
+          <div class="row" style="font-size:12px;margin-bottom:4px">
+            <strong>Spend pauta / ops</strong>
+            <span>$4.2M / $12.0M (35%)</span>
+          </div>
+          <div class="bar gold"><i style="width:35%"></i></div>
+        </div>
+        <div style="margin-top:14px">
+          <div class="row" style="font-size:12px;margin-bottom:4px">
+            <strong>Avance inscritos</strong>
+            <span>18%</span>
+          </div>
+          <div class="bar"><i style="width:18%"></i></div>
+        </div>
+        <p class="sub" style="margin-top:12px;line-height:1.45">
+          Spend al 35% del presupuesto; inscritos al 18% de la meta. Prioridad: cupos financiados Neiva antes de más pauta.
+        </p>
+      </div>
+
+      <div class="alert">
+        <div class="lab">Alerta</div>
+        <strong style="display:block;margin-top:4px;font-size:14px;line-height:1.35">
+          Riesgo esta semana: Uniandes corte / Uniminuto subsidio
+        </strong>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.45;color:rgba(26,43,74,.8)">
+          Competencia en Neiva puede robar cupos docentes. Captación ya tiene campaña de respuesta (correo + WA) lista para aprobar en Mi día.
+        </p>
+        <p class="sub" style="margin-top:8px">Agente Captación · listo en Mi día</p>
+      </div>
+
+      <p class="footer-note">Panel completo en la app: /direccion · Mi día: pestaña Natalia</p>
+    </main>
+  </div>
+
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+  <script>
+    const APROBAR = [
+      { id:"a1", nombre:"Secretaría de Educación · Huila", rolOrg:"Financiador · Neiva", canal:"Correo", why:"8 cupos en negociación. Región prioriza cierre S2 hacia equilibrio (10).", preview:"Estimada Secretaría: retomo cupos cohorte 2027-1 Neiva. ¿Agendamos visita financiador esta semana (jue–vie AM)?", agente:"Agente Región" },
+      { id:"a2", nombre:"Alcaldía de Neiva · Educación", rolOrg:"Financiador · piloto cupos", canal:"LinkedIn", why:"Piloto municipal sin respuesta. Captación sugiere toque corto 15 min.", preview:"Hola — piloto cupos docentes Neiva 2027-1. ¿15 min esta semana?", agente:"Agente Captación" },
+      { id:"a3", nombre:"Colegio Santa Librada · Rectoría", rolOrg:"Financiador · Neiva", canal:"Correo", why:"Follow-up D+3. Guardian marca riesgo de enfriamiento si no se toca hoy.", preview:"Estimada Rectoría: hace tres días enviamos la carta de cupos docentes. ¿Pudieron revisarla?", agente:"Agente Guardian" },
+      { id:"a4", nombre:"Coordinación · Colegio demo Neiva", rolOrg:"Interesado · Pedagogía (pauta Meta)", canal:"Correo", why:"Lead caliente de pauta. Brochure + video antes de que baje el interés.", preview:"Vimos su interés en Pedagogía. Le adjunto brochure 2027-1. ¿Agendamos video de 20 min?", agente:"Agente Captación" },
+      { id:"a5", nombre:"Docente · INEM Julián Motta Salas", rolOrg:"Interesado · Educación · Neiva", canal:"LinkedIn", why:"Perfil alineado a Maestría en Educación. Primera ola docentes S2.", preview:"Hola, vi su perfil en educación en Neiva. Abrimos cohorte 2027-1 con opciones de cupo. ¿Video corta esta semana?", agente:"Agente Captación" },
+      { id:"a6", nombre:"IE Normal Superior · Extensión", rolOrg:"Financiador · cupos adicionales", canal:"Correo", why:"Ya cerraron 3 cupos; Región propone 2 más en Educación.", preview:"Estimada Extensión: gracias por los 3 cupos. ¿Revisamos 2 adicionales el jueves AM?", agente:"Agente Región" },
+      { id:"a7", nombre:"Gobernación del Huila · Educación", rolOrg:"Financiador regional", canal:"Correo", why:"Convenio territorial en radar. Orquestadora pidió carta corta hoy.", preview:"Estimada Dirección: retomo convenio territorial maestrías Unisabana. ¿Conversamos 20 min sobre cupos 2027-1?", agente:"Agente Región" },
+      { id:"a8", nombre:"Coordinadora académica · Champagnat", rolOrg:"Interesado · Pedagogía · Neiva", canal:"WA", why:"Abrió WA hace 2 días sin confirmar horario. Toque suave de cierre.", preview:"Hola 👋 Retomo Pedagogía 2027-1. ¿Le queda mejor video jueves 4 pm o viernes AM?", agente:"Agente Captación" },
+    ];
+    const RESPONDIERON = [
+      { id:"r1", nombre:"IE Normal Superior de Neiva · Rectoría", rolOrg:"Financiador · 3 cupos cerrados", canal:"Correo", resumen:"Respondió: disponible jueves AM para visita. Cupos adicionales en mesa.", nextStep:"Visita financiador · 30–45 min", nextStepDetail:"Jueves AM · Normal Superior Neiva" },
+      { id:"r2", nombre:"Docente · Normal Superior Neiva", rolOrg:"Interesado · Maestría en Educación", canal:"WA", resumen:"Quiere conocer campus. Admisiones sugiere desayuno (no visita financiador).", nextStep:"Desayuno campus · Chía", nextStepDetail:"Sábado sugerido · 9:00–11:00" },
+      { id:"r3", nombre:"Coordinadora · Champagnat Neiva", rolOrg:"Interesado · Pedagogía", canal:"Correo", resumen:"Aceptó conversar. Propone video; Captación ya armó agenda.", nextStep:"Video 15 min", nextStepDetail:"Jueves 16:00 · Pedagogía 2027-1" },
+    ];
+    const PROGRAMAS = [
+      { corto:"Educación", inscritos:5, meta:20, eq:10 },
+      { corto:"Pedagogía", inscritos:3, meta:20, eq:10 },
+      { corto:"Dir. y Gestión", inscritos:4, meta:20, eq:10 },
+      { corto:"Des. Infantil", inscritos:2, meta:20, eq:10 },
+    ];
+
+    let pendientes = APROBAR.map(c => ({...c}));
+    let enviados = [];
+    let respondieron = RESPONDIERON.map(c => ({...c}));
+    let editingId = null;
+
+    function badgeClass(c) {
+      if (c === "WA") return "wa";
+      if (c === "LinkedIn") return "li";
+      return "correo";
+    }
+    function toast(msg) {
+      const wrap = document.getElementById("toasts");
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.textContent = msg;
+      wrap.appendChild(el);
+      setTimeout(() => el.remove(), 2800);
+    }
+    function renderAprobar() {
+      const root = document.getElementById("lista-aprobar");
+      document.getElementById("count-aprobar").textContent = pendientes.length;
+      if (!pendientes.length) {
+        root.innerHTML = '<div class="card" style="text-align:center;color:rgba(26,43,74,.55);font-size:14px">Nada pendiente. Todo pasó a Enviados hoy.</div>';
+        return;
+      }
+      root.innerHTML = pendientes.map(c => `
+        <div class="card" data-id="${c.id}">
+          <div class="row">
+            <div>
+              <div class="name">${c.nombre}</div>
+              <div class="sub">${c.rolOrg}</div>
+            </div>
+            <span class="badge ${badgeClass(c.canal)}">${c.canal}</span>
+          </div>
+          <p class="why">${c.why}</p>
+          <div class="preview">${c.preview}</div>
+          <div class="agent">Preparado por ${c.agente}</div>
+          <div class="edit-box ${editingId === c.id ? '' : 'hidden'}">
+            <textarea data-edit="${c.id}">${c.preview}</textarea>
+            <div class="actions">
+              <button type="button" class="btn primary" data-save="${c.id}">Guardar</button>
+              <button type="button" class="btn ghost" data-cancel-edit>Cancelar</button>
+            </div>
+          </div>
+          <div class="actions ${editingId === c.id ? 'hidden' : ''}">
+            <button type="button" class="btn primary" data-aprobar="${c.id}">Aprobar</button>
+            <button type="button" class="btn ghost" data-editar="${c.id}">Editar</button>
+          </div>
+        </div>
+      `).join("");
+    }
+    function renderEnviados() {
+      const block = document.getElementById("block-enviados");
+      const root = document.getElementById("lista-enviados");
+      document.getElementById("count-enviados").textContent = enviados.length;
+      if (!enviados.length) { block.classList.add("hidden"); return; }
+      block.classList.remove("hidden");
+      root.innerHTML = enviados.map(c => `
+        <div class="card muted">
+          <div class="row">
+            <div class="name" style="font-size:14px">${c.nombre}</div>
+            <span style="font-size:11px;font-weight:650;color:var(--ok)">✓ Demo</span>
+          </div>
+          <div class="sub">${c.canal} · ${c.rolOrg}</div>
+        </div>
+      `).join("");
+    }
+    function renderRespondieron() {
+      const root = document.getElementById("lista-respondieron");
+      document.getElementById("count-resp").textContent = respondieron.length;
+      if (!respondieron.length) {
+        root.innerHTML = '<div class="card" style="text-align:center;color:rgba(26,43,74,.55);font-size:14px">Sin respuestas pendientes.</div>';
+        return;
+      }
+      root.innerHTML = respondieron.map(c => `
+        <div class="card">
+          <div class="row">
+            <div>
+              <div class="name">${c.nombre}</div>
+              <div class="sub">${c.rolOrg}</div>
+            </div>
+            <span class="badge ${badgeClass(c.canal)}">${c.canal}</span>
+          </div>
+          <p class="why">${c.resumen}</p>
+          <div class="next">
+            <div class="lab">Siguiente paso sugerido</div>
+            <strong style="font-size:14px">${c.nextStep}</strong>
+            <div class="sub">${c.nextStepDetail}</div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn primary full" data-aprobar-next="${c.id}">Aprobar</button>
+          </div>
+        </div>
+      `).join("");
+    }
+    function renderProgramas() {
+      document.getElementById("lista-programas").innerHTML = PROGRAMAS.map(p => {
+        const pct = Math.round((p.inscritos / p.meta) * 100);
+        const faltan = p.inscritos < p.eq ? `Faltan ${p.eq - p.inscritos} a BE` : "Sobre equilibrio";
+        return `
+          <div class="card">
+            <div class="row">
+              <strong>${p.corto}</strong>
+              <span style="font-variant-numeric:tabular-nums"><strong>${p.inscritos}</strong> <span class="sub">/ ${p.meta}</span></span>
+            </div>
+            <div class="bar ${p.inscritos >= p.eq * 0.5 ? 'ok' : ''}"><i style="width:${pct}%"></i></div>
+            <div class="row" style="margin-top:6px">
+              <span class="sub">Equilibrio ${p.eq}</span>
+              <span class="sub">${faltan}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    document.getElementById("lista-aprobar").addEventListener("click", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      const aprobar = t.getAttribute("data-aprobar");
+      const editar = t.getAttribute("data-editar");
+      const save = t.getAttribute("data-save");
+      if (t.hasAttribute("data-cancel-edit")) { editingId = null; renderAprobar(); return; }
+      if (aprobar) {
+        const card = pendientes.find(c => c.id === aprobar);
+        if (!card) return;
+        pendientes = pendientes.filter(c => c.id !== aprobar);
+        enviados = [card, ...enviados];
+        editingId = null;
+        toast("Listo · en demo no se envía de verdad");
+        renderAprobar(); renderEnviados();
+      }
+      if (editar) { editingId = editar; renderAprobar(); }
+      if (save) {
+        const ta = document.querySelector(`textarea[data-edit="${save}"]`);
+        const card = pendientes.find(c => c.id === save);
+        if (card && ta) card.preview = ta.value;
+        editingId = null;
+        toast("Borrador actualizado (demo)");
+        renderAprobar();
+      }
+    });
+    document.getElementById("lista-respondieron").addEventListener("click", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      const id = t.getAttribute("data-aprobar-next");
+      if (!id) return;
+      respondieron = respondieron.filter(c => c.id !== id);
+      toast("Listo · en demo no se envía de verdad");
+      renderRespondieron();
+    });
+
+    document.querySelectorAll(".tabs button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.getAttribute("data-tab");
+        document.getElementById("screen-natalia").classList.toggle("active", tab === "natalia");
+        document.getElementById("screen-lucia").classList.toggle("active", tab === "lucia");
+      });
+    });
+
+    renderAprobar();
+    renderEnviados();
+    renderRespondieron();
+    renderProgramas();
+  </script>
+</body>
+</html>
