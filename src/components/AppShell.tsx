@@ -28,6 +28,7 @@ export function AppShell({
   const router = useRouter();
   const [outlookOpen, setOutlookOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
+  const [masOpen, setMasOpen] = useState(false);
   const { status, refresh } = useConnections();
 
   async function logout() {
@@ -37,12 +38,19 @@ export function AppShell({
   }
 
   const isMercadeo = rol === "mercadeo";
+  const homeHref = isMercadeo ? "/mi-dia" : "/como-vamos";
+
+  const mercadeoPrimary = new Set(["/mi-dia", "/crm", "/agentes"]);
+  const direccionPrimary = new Set(["/como-vamos", "/equipo", "/estudio"]);
+  const onSecondary = isMercadeo
+    ? !mercadeoPrimary.has(pathname)
+    : !direccionPrimary.has(pathname);
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 bg-navy px-4 py-3 text-white">
         <Link
-          href={isMercadeo ? "/hoy" : "/direccion"}
+          href={homeHref}
           className="flex items-center gap-3 text-white"
           style={{ color: "#fff" }}
         >
@@ -104,85 +112,95 @@ export function AppShell({
           </div>
           {isMercadeo ? (
             <>
-              <NavLink href="/hoy" active={pathname === "/hoy"}>
-                Hoy
-              </NavLink>
-              <NavLink href="/estudio" active={pathname === "/estudio"}>
-                Estudio mercado
+              <NavLink href="/mi-dia" active={pathname === "/mi-dia"}>
+                Mi día
               </NavLink>
               <NavLink href="/crm" active={pathname === "/crm"}>
                 CRM
               </NavLink>
-              <NavLink href="/playbook" active={pathname === "/playbook"}>
-                Playbook
-              </NavLink>
-              <NavLink href="/post-visita" active={pathname === "/post-visita"}>
-                Post-visita
-              </NavLink>
-              <NavLink href="/biblioteca" active={pathname === "/biblioteca"}>
-                Biblioteca
-              </NavLink>
-              <NavLink href="/capacidad" active={pathname === "/capacidad"}>
-                Capacidad
-              </NavLink>
-              <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
-                Sala de guerra
-              </NavLink>
-              <NavLink href="/agenda" active={pathname === "/agenda"}>
-                Agenda
-              </NavLink>
-              <NavLink href="/actividad" active={pathname === "/actividad"}>
-                Actividad
-              </NavLink>
               <NavLink href="/agentes" active={pathname === "/agentes"}>
                 Agentes
               </NavLink>
-              <button
-                type="button"
-                onClick={() => setOutlookOpen(true)}
-                className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-navy/80 hover:bg-cream"
-              >
-                Ajustes · Conexiones
-              </button>
+              <MasSection open={masOpen || onSecondary} onToggle={() => setMasOpen((v) => !v)}>
+                <NavLink href="/hoy" active={pathname === "/hoy"}>
+                  Hoy (viejo)
+                </NavLink>
+                <NavLink href="/playbook" active={pathname === "/playbook"}>
+                  Playbook
+                </NavLink>
+                <NavLink href="/post-visita" active={pathname === "/post-visita"}>
+                  Post-visita
+                </NavLink>
+                <NavLink href="/biblioteca" active={pathname === "/biblioteca"}>
+                  Biblioteca
+                </NavLink>
+                <NavLink href="/capacidad" active={pathname === "/capacidad"}>
+                  Capacidad
+                </NavLink>
+                <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
+                  Sala de guerra
+                </NavLink>
+                <NavLink href="/agenda" active={pathname === "/agenda"}>
+                  Agenda
+                </NavLink>
+                <NavLink href="/actividad" active={pathname === "/actividad"}>
+                  Actividad
+                </NavLink>
+                <NavLink href="/estudio" active={pathname === "/estudio"}>
+                  Estudio
+                </NavLink>
+                <button
+                  type="button"
+                  onClick={() => setOutlookOpen(true)}
+                  className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-navy/80 hover:bg-cream"
+                >
+                  Ajustes · Conexiones
+                </button>
+              </MasSection>
             </>
           ) : (
             <>
-              <NavLink href="/direccion" active={pathname === "/direccion"}>
-                Dashboard
-              </NavLink>
-              <NavLink href="/estudio" active={pathname === "/estudio"}>
-                Estudio mercado
+              <NavLink href="/como-vamos" active={pathname === "/como-vamos"}>
+                Cómo vamos
               </NavLink>
               <NavLink href="/equipo" active={pathname === "/equipo"}>
                 Equipo
               </NavLink>
-              <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
-                Sala de guerra
+              <NavLink href="/estudio" active={pathname === "/estudio"}>
+                Estudio
               </NavLink>
-              <NavLink href="/playbook" active={pathname === "/playbook"}>
-                Playbook
-              </NavLink>
-              <NavLink href="/capacidad" active={pathname === "/capacidad"}>
-                Capacidad
-              </NavLink>
-              <NavLink href="/crm" active={pathname === "/crm"}>
-                CRM
-              </NavLink>
-              <NavLink href="/biblioteca" active={pathname === "/biblioteca"}>
-                Biblioteca
-              </NavLink>
-              <NavLink href="/agenda" active={pathname === "/agenda"}>
-                Agenda
-              </NavLink>
-              <NavLink href="/actividad" active={pathname === "/actividad"}>
-                Actividad
-              </NavLink>
-              <NavLink href="/agentes" active={pathname === "/agentes"}>
-                Agentes
-              </NavLink>
-              <NavLink href="/hoy" active={pathname === "/hoy"}>
-                Vista Hoy
-              </NavLink>
+              <MasSection open={masOpen || onSecondary} onToggle={() => setMasOpen((v) => !v)}>
+                <NavLink href="/direccion" active={pathname === "/direccion"}>
+                  Dirección (detalle)
+                </NavLink>
+                <NavLink href="/crm" active={pathname === "/crm"}>
+                  CRM
+                </NavLink>
+                <NavLink href="/sala-guerra" active={pathname === "/sala-guerra"}>
+                  Sala de guerra
+                </NavLink>
+                <NavLink href="/playbook" active={pathname === "/playbook"}>
+                  Playbook
+                </NavLink>
+                <NavLink href="/capacidad" active={pathname === "/capacidad"}>
+                  Capacidad
+                </NavLink>
+                <NavLink href="/biblioteca" active={pathname === "/biblioteca"}>
+                  Biblioteca
+                </NavLink>
+                <NavLink href="/agenda" active={pathname === "/agenda"}>
+                  Agenda
+                </NavLink>
+                <NavLink href="/actividad" active={pathname === "/actividad"}>
+                  Actividad
+                </NavLink>
+                <NavLink href="/agentes" active={pathname === "/agentes"}>
+                  Agentes
+                </NavLink>
+                <NavLink href="/hoy" active={pathname === "/hoy"}>
+                  Vista Hoy
+                </NavLink>
+              </MasSection>
             </>
           )}
         </nav>
@@ -190,17 +208,11 @@ export function AppShell({
         <div className="flex w-full gap-1 border-b border-border bg-cream-card px-2 py-2 md:hidden">
           {isMercadeo ? (
             <>
-              <MobileTab href="/hoy" active={pathname === "/hoy"}>
-                Hoy
-              </MobileTab>
-              <MobileTab href="/estudio" active={pathname === "/estudio"}>
-                Estudio
+              <MobileTab href="/mi-dia" active={pathname === "/mi-dia"}>
+                Mi día
               </MobileTab>
               <MobileTab href="/crm" active={pathname === "/crm"}>
                 CRM
-              </MobileTab>
-              <MobileTab href="/sala-guerra" active={pathname === "/sala-guerra"}>
-                Guerra
               </MobileTab>
               <MobileTab href="/agentes" active={pathname === "/agentes"}>
                 Agentes
@@ -208,20 +220,14 @@ export function AppShell({
             </>
           ) : (
             <>
-              <MobileTab href="/direccion" active={pathname === "/direccion"}>
-                Dashboard
+              <MobileTab href="/como-vamos" active={pathname === "/como-vamos"}>
+                Cómo vamos
+              </MobileTab>
+              <MobileTab href="/equipo" active={pathname === "/equipo"}>
+                Equipo
               </MobileTab>
               <MobileTab href="/estudio" active={pathname === "/estudio"}>
                 Estudio
-              </MobileTab>
-              <MobileTab href="/sala-guerra" active={pathname === "/sala-guerra"}>
-                Guerra
-              </MobileTab>
-              <MobileTab href="/capacidad" active={pathname === "/capacidad"}>
-                Cupos
-              </MobileTab>
-              <MobileTab href="/agentes" active={pathname === "/agentes"}>
-                Agentes
               </MobileTab>
             </>
           )}
@@ -254,6 +260,31 @@ export function AppShell({
       )}
 
       <ToastHost />
+    </div>
+  );
+}
+
+function MasSection({
+  open,
+  onToggle,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mt-2 border-t border-border/80 pt-2">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mb-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-navy/60 hover:bg-cream"
+        aria-expanded={open}
+      >
+        <span>Más</span>
+        <span className="text-xs text-navy/40">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && <div className="pl-1">{children}</div>}
     </div>
   );
 }

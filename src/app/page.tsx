@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+function homeForRol(rol: string) {
+  return rol === "mercadeo" ? "/mi-dia" : "/como-vamos";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,7 +30,7 @@ export default function LoginPage() {
         setError(data.error || "No se pudo entrar");
         return;
       }
-      router.push(data.rol === "mercadeo" ? "/hoy" : "/direccion");
+      router.push(homeForRol(data.rol));
       router.refresh();
     } finally {
       setLoading(false);
@@ -43,7 +46,7 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ demoUserId, rol }),
       });
-      router.push(rol === "mercadeo" ? "/hoy" : "/direccion");
+      router.push(homeForRol(rol));
       router.refresh();
     } finally {
       setDemoLoading(null);
@@ -68,39 +71,55 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Demo aprobación producto — sin login */}
         <div className="mb-5 rounded-[12px] border-2 border-navy bg-cream-card p-4 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Demo aprobación · sin login
+            Entrar a la app
           </div>
           <p className="mt-1 text-xs leading-relaxed text-navy/65">
-            Para Laura Natalia y Laura Lucía · una pantalla cada una. Sin
-            Azure / WhatsApp.
+            Un solo producto · elige tu rol y entras con sesión demo.
           </p>
           <div className="mt-3 flex flex-col gap-2">
-            <Link
-              href="/mi-dia"
-              className="flex min-h-12 items-center justify-between rounded-lg bg-navy px-4 text-sm font-semibold text-white"
+            <button
+              type="button"
+              disabled={!!demoLoading}
+              onClick={() => demoRapido("u-mercadeo", "mercadeo")}
+              className="flex min-h-12 items-center justify-between rounded-lg bg-navy px-4 text-sm font-semibold text-white disabled:opacity-60"
               style={{ color: "#fff" }}
             >
-              <span>Ver demo Natalia (Mi día)</span>
+              <span>
+                {demoLoading === "u-mercadeo"
+                  ? "Entrando…"
+                  : "Demo rápido Natalia · Mi día"}
+              </span>
               <span aria-hidden>→</span>
-            </Link>
-            <Link
-              href="/como-vamos"
-              className="flex min-h-12 items-center justify-between rounded-lg border-2 border-navy bg-white px-4 text-sm font-semibold text-navy"
+            </button>
+            <button
+              type="button"
+              disabled={!!demoLoading}
+              onClick={() => demoRapido("u-direccion", "direccion")}
+              className="flex min-h-12 items-center justify-between rounded-lg border-2 border-navy bg-white px-4 text-sm font-semibold text-navy disabled:opacity-60"
             >
-              <span>Ver demo Lucía (Cómo vamos)</span>
+              <span>
+                {demoLoading === "u-direccion"
+                  ? "Entrando…"
+                  : "Demo rápido Lucía · Cómo vamos"}
+              </span>
               <span aria-hidden>→</span>
-            </Link>
+            </button>
+            <button
+              type="button"
+              disabled={!!demoLoading}
+              onClick={() => demoRapido("u-ivan", "direccion")}
+              className="flex min-h-12 items-center justify-between rounded-lg border border-border bg-white px-4 text-sm font-medium text-navy disabled:opacity-60"
+            >
+              <span>
+                {demoLoading === "u-ivan"
+                  ? "Entrando…"
+                  : "Demo Ivan · Cómo vamos"}
+              </span>
+              <span aria-hidden>→</span>
+            </button>
           </div>
-          <p className="mt-2 text-center text-[11px] text-navy/45">
-            También:{" "}
-            <a href="/demo-aprobacion.html" className="underline">
-              /demo-aprobacion.html
-            </a>{" "}
-            (fallback HTML)
-          </p>
         </div>
 
         <form
@@ -147,45 +166,10 @@ export default function LoginPage() {
             Demo: laura.natalia@ · laura.lucia@ · ivan.auli@ · clave{" "}
             <strong>sabana2027</strong>
           </p>
+          <p className="mt-1 text-center text-[11px] text-navy/45">
+            Tras entrar: mercadeo → Mi día · dirección → Cómo vamos
+          </p>
         </form>
-
-        <div className="mt-5 rounded-[10px] border border-dashed border-border bg-cream-card/80 p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-navy/50">
-            Entrar demo rápido (UI completa)
-          </div>
-          <div className="mt-2 flex flex-col gap-2">
-            <button
-              type="button"
-              disabled={!!demoLoading}
-              onClick={() => demoRapido("u-mercadeo", "mercadeo")}
-              className="min-h-11 rounded-lg border border-border bg-white px-3 text-left text-sm hover:border-navy/40 disabled:opacity-60"
-            >
-              {demoLoading === "u-mercadeo"
-                ? "Entrando…"
-                : "Laura Natalia · Mercadeo (/hoy)"}
-            </button>
-            <button
-              type="button"
-              disabled={!!demoLoading}
-              onClick={() => demoRapido("u-direccion", "direccion")}
-              className="min-h-11 rounded-lg border border-border bg-white px-3 text-left text-sm disabled:opacity-60"
-            >
-              {demoLoading === "u-direccion"
-                ? "Entrando…"
-                : "Laura Lucía · Dirección (/direccion)"}
-            </button>
-            <button
-              type="button"
-              disabled={!!demoLoading}
-              onClick={() => demoRapido("u-ivan", "direccion")}
-              className="min-h-11 rounded-lg border border-border bg-white px-3 text-left text-sm disabled:opacity-60"
-            >
-              {demoLoading === "u-ivan"
-                ? "Entrando…"
-                : "Ivan Auli · Dirección / admin"}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -13,12 +13,12 @@ export async function GET() {
     return NextResponse.redirect(new URL("/", base));
   }
   if (!azureEnvConfigured()) {
-    return NextResponse.redirect(`${base}/hoy?outlook=setup`);
+    return NextResponse.redirect(`${base}/mi-dia?outlook=setup`);
   }
   const state = crypto.randomBytes(16).toString("hex");
   const url = buildOutlookAuthUrl(state);
   if (!url) {
-    return NextResponse.redirect(`${base}/hoy?outlook=setup`);
+    return NextResponse.redirect(`${base}/mi-dia?outlook=setup`);
   }
   const res = NextResponse.redirect(url);
   res.cookies.set("outlook_oauth_state", state, {

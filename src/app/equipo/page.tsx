@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function EquipoPage() {
   const session = await getSessionUser();
   if (!session) redirect("/");
-  if (session.rol !== "direccion") redirect("/hoy");
+  if (session.rol !== "direccion") redirect("/mi-dia");
 
   const users = await listUsers();
 

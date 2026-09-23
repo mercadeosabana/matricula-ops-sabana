@@ -42,31 +42,20 @@ export function ComoVamosClient() {
   const spendPct = Math.round((t.spendCop / t.spendBudgetCop) * 100);
 
   return (
-    <div className="min-h-screen bg-cream text-navy">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-navy px-4 py-3 text-white">
-        <div className="mx-auto flex max-w-lg items-start justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-medium uppercase tracking-wider text-gold">
-              ¿Cómo vamos? · Dirección
-            </div>
-            <h1 className="m-0 mt-0.5 text-lg font-bold leading-tight">
-              Cohorte 2027-1
-            </h1>
-            <p className="mt-1 text-xs text-white/75">
-              {t.territorio} · {t.semana}
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="shrink-0 rounded-lg border border-white/25 px-2.5 py-1.5 text-xs text-white/90"
-            style={{ color: "#fff" }}
-          >
-            Salir
-          </Link>
+    <div className="text-navy">
+      <div className="mb-5">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/50">
+          ¿Cómo vamos?
         </div>
-      </header>
+        <h1 className="m-0 mt-0.5 text-xl font-bold leading-tight text-navy">
+          Cohorte 2027-1
+        </h1>
+        <p className="mt-1 text-sm text-navy/65">
+          {t.territorio} · {t.semana}
+        </p>
+      </div>
 
-      <main className="mx-auto max-w-lg px-4 py-5 pb-16">
+      <div className="max-w-lg pb-8">
         {/* Big numbers */}
         <section className="grid grid-cols-2 gap-3">
           <div className="rounded-xl border border-border bg-cream-card p-4 shadow-sm">
@@ -194,16 +183,13 @@ export function ComoVamosClient() {
           </div>
         </section>
 
-        <p className="mt-10 text-center text-[11px] text-navy/40">
+        <p className="mt-8 text-center text-[11px] text-navy/40">
+          Detalle ampliado en{" "}
           <Link href="/direccion" className="underline decoration-navy/30">
-            Panel completo (/direccion)
-          </Link>
-          {" · "}
-          <Link href="/mi-dia" className="underline decoration-navy/30">
-            Mi día (Natalia)
+            Dirección (detalle)
           </Link>
         </p>
-      </main>
+      </div>
     </div>
   );
 }

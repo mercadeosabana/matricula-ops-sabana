@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   MI_DIA_APROBAR,
@@ -9,7 +8,7 @@ import {
   type CardAprobar,
   type CardRespondio,
 } from "@/lib/demo-aprobacion";
-import { ToastHost, toast } from "./Toast";
+import { toast } from "./Toast";
 
 function canalBadgeClass(canal: CanalDemo) {
   if (canal === "WA") return "bg-[#e8f5ee] text-ok border-ok/25";
@@ -104,30 +103,18 @@ export function MiDiaClient() {
   }
 
   return (
-    <div className="min-h-screen bg-cream text-navy">
-      <ToastHost />
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-navy px-4 py-3 text-white">
-        <div className="mx-auto flex max-w-lg items-start justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-medium uppercase tracking-wider text-gold">
-              Matrícula Ops · Mi día
-            </div>
-            <h1 className="m-0 mt-0.5 text-lg font-bold leading-tight">
-              Neiva · esta semana
-            </h1>
-            <p className="mt-1 text-xs text-white/75">{metaLine}</p>
-          </div>
-          <Link
-            href="/"
-            className="shrink-0 rounded-lg border border-white/25 px-2.5 py-1.5 text-xs text-white/90"
-            style={{ color: "#fff" }}
-          >
-            Salir
-          </Link>
+    <div className="text-navy">
+      <div className="mb-5">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-navy/50">
+          Mi día
         </div>
-      </header>
+        <h1 className="m-0 mt-0.5 text-xl font-bold leading-tight text-navy">
+          Neiva · esta semana
+        </h1>
+        <p className="mt-1 text-sm text-navy/65">{metaLine}</p>
+      </div>
 
-      <main className="mx-auto max-w-lg px-4 py-5 pb-16">
+      <div className="max-w-lg pb-8">
         <section aria-labelledby="aprobar-hoy">
           <div className="mb-3 flex items-end justify-between gap-2">
             <h2 id="aprobar-hoy" className="m-0 text-base font-bold">
@@ -280,16 +267,7 @@ export function MiDiaClient() {
           Los agentes (Captación, Región, Guardian) prepararon esto. Tú solo
           decides.
         </p>
-        <p className="mt-3 text-center text-[11px] text-navy/40">
-          <Link href="/hoy" className="underline decoration-navy/30">
-            UI completa (/hoy)
-          </Link>
-          {" · "}
-          <Link href="/como-vamos" className="underline decoration-navy/30">
-            Cómo vamos (Lucía)
-          </Link>
-        </p>
-      </main>
+      </div>
     </div>
   );
 }
