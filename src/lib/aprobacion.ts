@@ -70,19 +70,37 @@ function standWhy(lead: Lead): string {
   return `Lead caliente inbound (${lead.origen || "pauta"}). Brochure + video antes de que baje el interés.`;
 }
 
-function firstContactPreview(lead: Lead): string {
-  const prog = programaCorto(lead.programaInteres);
-  const name = lead.nombre.split(" ")[0] || lead.nombre;
-  if (isStand(lead)) {
-    return `Hola ${name}: gracias por acercarte al stand Unisabana en ASOCOPI Bucaramanga. Te comparto el brochure de ${prog} 2027-1. ¿Agendamos un video corto o una llamada esta semana?\n\n— Laura Natalia · Mercadeo (laura.bobadilla@unisabana.edu.co)`;
-  }
-  return `Hola ${name}: vimos tu interés en ${prog}. Te adjunto brochure 2027-1. ¿Agendamos video de 20 min esta semana?`;
+/** Appends brochure URL line if present and not already in the preview. */
+export function appendBrochureLine(
+  preview: string,
+  brochureUrl?: string | null
+): string {
+  const url = (brochureUrl || "").trim();
+  if (!url) return preview;
+  if (preview.includes(url)) return preview;
+  return `${preview.trimEnd()}\n\nBrochure: ${url}`;
 }
 
-function followUpD3Preview(lead: Lead): string {
+function firstContactPreview(
+  lead: Lead,
+  brochureUrl?: string | null
+): string {
+  const prog = programaCorto(lead.programaInteres);
+  const name = lead.nombre.split(" ")[0] || lead.nombre;
+  let body: string;
+  if (isStand(lead)) {
+    body = `Hola ${name}: gracias por acercarte al stand Unisabana en ASOCOPI Bucaramanga. Te comparto el brochure de ${prog} 2027-1. ¿Agendamos un video corto o una llamada esta semana?\n\n— Laura Natalia · Mercadeo (laura.bobadilla@unisabana.edu.co)`;
+  } else {
+    body = `Hola ${name}: vimos tu interés en ${prog}. Te adjunto brochure 2027-1. ¿Agendamos video de 20 min esta semana?`;
+  }
+  return appendBrochureLine(body, brochureUrl);
+}
+
+function followUpD3Preview(lead: Lead, brochureUrl?: string | null): string {
   const name = lead.nombre.split(" ")[0] || lead.nombre;
   const prog = programaCorto(lead.programaInteres);
-  return `Hola ${name} 👋 Retomo ${prog} 2027-1 (Unisabana Educación). ¿Pudiste revisar el brochure? ¿Te queda mejor un video esta semana o la próxima?`;
+  const body = `Hola ${name} 👋 Retomo ${prog} 2027-1 (Unisabana Educación). ¿Pudiste revisar el brochure? ¿Te queda mejor un video esta semana o la próxima?`;
+  return appendBrochureLine(body, brochureUrl);
 }
 
 function followUpD7Preview(lead: Lead): string {
@@ -98,8 +116,16 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+export type BuildPlaybookOptions = {
+  brochureUrl?: string | null;
+};
+
 /** Construye las 3 cards del playbook inbound (primer contacto + D+3 + D+7). */
-export function buildInboundPlaybookCards(lead: Lead): AprobacionCard[] {
+export function buildInboundPlaybookCards(
+  lead: Lead,
+  opts?: BuildPlaybookOptions
+): AprobacionCard[] {
+  const brochureUrl = opts?.brochureUrl ?? null;
   const createdAt = lead.createdAt || new Date().toISOString();
   const d0 = todayBogota();
   const d3 = bogotaDatePlus(3, createdAt);
@@ -118,7 +144,7 @@ export function buildInboundPlaybookCards(lead: Lead): AprobacionCard[] {
     rolOrg,
     canal: firstCanal,
     why: standWhy(lead),
-    preview: firstContactPreview(lead),
+    preview: firstContactPreview(lead, brochureUrl),
     agente: "Agente Captación",
     estado: "pendiente",
     scheduledFor: d0,
@@ -135,7 +161,7 @@ export function buildInboundPlaybookCards(lead: Lead): AprobacionCard[] {
     rolOrg,
     canal: "WA",
     why: `Follow-up D+3 (${d3}). Guardian: riesgo de enfriamiento si no se toca.`,
-    preview: followUpD3Preview(lead),
+    preview: followUpD3Preview(lead, brochureUrl),
     agente: "Agente Guardian",
     estado: "programado",
     scheduledFor: d3,

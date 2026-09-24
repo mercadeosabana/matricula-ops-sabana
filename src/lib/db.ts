@@ -29,7 +29,10 @@ import {
   normalizeNextStep,
 } from "./playbook";
 import type { AprobacionCard } from "./aprobacion";
-import { buildInboundPlaybookCards } from "./aprobacion";
+import {
+  appendBrochureLine,
+  buildInboundPlaybookCards,
+} from "./aprobacion";
 import {
   deleteStoreRaw,
   readStoreRaw,
@@ -43,6 +46,18 @@ const DATA_DIR = process.env.VERCEL
   : path.join(process.cwd(), "data");
 const STORE_PATH = path.join(DATA_DIR, "store.json");
 
+export type BrochureMeta = {
+  url: string;
+  pathname: string;
+  fileName: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+};
+
+export type MaterialesStore = {
+  brochures: Record<string, BrochureMeta>;
+};
+
 type Store = {
   users: User[];
   colegios: Colegio[];
@@ -55,6 +70,8 @@ type Store = {
   metasCohorte: MetasCohorte;
   /** Cards live para /mi-dia (aprobar sin envío real) */
   aprobaciones: AprobacionCard[];
+  /** Brochures PDF por programa canónico (metadata; archivo en Blob) */
+  materiales?: MaterialesStore;
 };
 
 export const PROGRAMAS_META_CANONICOS = [
@@ -357,6 +374,7 @@ function seedStore(): Store {
     agendaEvents: [],
     metasCohorte: defaultMetasCohorte(),
     aprobaciones: [],
+    materiales: { brochures: {} },
   };
 }
 
@@ -432,6 +450,14 @@ function hydrateStore(parsed: Store): Store {
   }
   if (!Array.isArray(parsed.aprobaciones)) {
     parsed.aprobaciones = [];
+  }
+  if (!parsed.materiales || typeof parsed.materiales !== "object") {
+    parsed.materiales = { brochures: {} };
+  } else if (
+    !parsed.materiales.brochures ||
+    typeof parsed.materiales.brochures !== "object"
+  ) {
+    parsed.materiales = { brochures: {} };
   }
   if (
     !parsed.metasCohorte ||
@@ -757,7 +783,8 @@ export async function createLead(
 
   if (input.enqueuePlaybook) {
     if (!Array.isArray(store.aprobaciones)) store.aprobaciones = [];
-    const cards = buildInboundPlaybookCards(lead);
+    const brochureUrl = brochureUrlFromStore(store, lead.programaInteres);
+    const cards = buildInboundPlaybookCards(lead, { brochureUrl });
     store.aprobaciones.unshift(...cards);
   }
 
@@ -1066,10 +1093,123 @@ export async function enqueueInboundPlaybook(
   const lead = store.leads.find((l) => l.id === leadId);
   if (!lead) return [];
   if (!Array.isArray(store.aprobaciones)) store.aprobaciones = [];
-  const cards = buildInboundPlaybookCards(normalizeLead(lead));
+  const normalized = normalizeLead(lead);
+  const brochureUrl = brochureUrlFromStore(store, normalized.programaInteres);
+  const cards = buildInboundPlaybookCards(normalized, { brochureUrl });
   store.aprobaciones.unshift(...cards);
   await saveStore(store);
   return cards.map((c) => ({ ...c }));
+}
+
+function emptyMateriales(): MaterialesStore {
+  return { brochures: {} };
+}
+
+function brochureUrlFromStore(
+  store: Store,
+  programa: string | null | undefined
+): string | null {
+  if (!programa) return null;
+  const brochures = store.materiales?.brochures || {};
+  const meta = brochures[programa];
+  return meta?.url || null;
+}
+
+/** Slug estable para pathname Blob `materiales/brochure-{slug}.pdf`. */
+export function brochureSlugForPrograma(programa: string): string {
+  const map: Record<string, string> = {
+    "Maestría en Educación": "educacion",
+    "Maestría en Pedagogía": "pedagogia",
+    "Maestría en Dirección y Gestión": "direccion-gestion",
+    "Maestría en Desarrollo Infantil": "desarrollo-infantil",
+  };
+  if (map[programa]) return map[programa];
+  return programa
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}
+
+export async function getMateriales(): Promise<MaterialesStore> {
+  const store = await loadStore();
+  if (!store.materiales?.brochures) {
+    store.materiales = emptyMateriales();
+  }
+  return {
+    brochures: { ...store.materiales.brochures },
+  };
+}
+
+export async function getBrochureForPrograma(
+  programa: string
+): Promise<BrochureMeta | null> {
+  const materiales = await getMateriales();
+  return materiales.brochures[programa] || null;
+}
+
+export async function upsertBrochureMeta(
+  programa: string,
+  meta: BrochureMeta
+): Promise<MaterialesStore> {
+  const store = await loadStore();
+  if (!store.materiales?.brochures) store.materiales = emptyMateriales();
+  store.materiales.brochures[programa] = meta;
+  // Nice-to-have: refresh pending Mi día cards for this programa
+  patchPendingCardsWithBrochure(store, programa, meta.url);
+  await saveStore(store);
+  return { brochures: { ...store.materiales.brochures } };
+}
+
+export async function deleteBrochureMeta(
+  programa: string
+): Promise<{ deleted: BrochureMeta | null; materiales: MaterialesStore }> {
+  const store = await loadStore();
+  if (!store.materiales?.brochures) store.materiales = emptyMateriales();
+  const deleted = store.materiales.brochures[programa] || null;
+  if (deleted) {
+    delete store.materiales.brochures[programa];
+  }
+  await saveStore(store);
+  return {
+    deleted,
+    materiales: { brochures: { ...store.materiales.brochures } },
+  };
+}
+
+/** Append brochure URL to pending/programado cards whose lead matches programa. */
+function patchPendingCardsWithBrochure(
+  store: Store,
+  programa: string,
+  url: string
+): number {
+  if (!url || !Array.isArray(store.aprobaciones)) return 0;
+  const leadIds = new Set(
+    store.leads
+      .filter((l) => l.programaInteres === programa)
+      .map((l) => l.id)
+  );
+  let n = 0;
+  for (let i = 0; i < store.aprobaciones.length; i++) {
+    const card = store.aprobaciones[i];
+    if (card.estado === "aprobada") continue;
+    if (!card.leadId || !leadIds.has(card.leadId)) continue;
+    const etiqueta = card.etiqueta || "";
+    const mentionsBrochure = /brochure/i.test(card.preview || "");
+    const isBrochureTouches =
+      etiqueta === "Primer contacto" ||
+      etiqueta === "Follow-up D+3" ||
+      mentionsBrochure;
+    if (!isBrochureTouches) continue;
+    const nextPreview = appendBrochureLine(card.preview, url);
+    if (nextPreview !== card.preview) {
+      store.aprobaciones[i] = { ...card, preview: nextPreview };
+      n++;
+    }
+  }
+  return n;
 }
 
 export function getStoreBackendKind() {

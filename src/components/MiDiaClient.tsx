@@ -256,6 +256,21 @@ export function MiDiaClient() {
         <div className="mt-2 whitespace-pre-wrap rounded-lg border border-border/80 bg-white/80 px-3 py-2 text-sm leading-relaxed text-navy/75">
           {previews[card.id] || card.preview}
         </div>
+        {(() => {
+          const text = previews[card.id] || card.preview || "";
+          const m = text.match(/https?:\/\/\S+/);
+          if (!m) return null;
+          return (
+            <a
+              href={m[0]}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-block text-[11px] font-semibold text-ok underline"
+            >
+              Brochure listo
+            </a>
+          );
+        })()}
         <div className="mt-1 text-[11px] text-navy/45">
           Preparado por {card.agente}
           {programado ? " · programado (aparece en Mi día cuando vence)" : ""}
@@ -334,6 +349,13 @@ export function MiDiaClient() {
               <p className="rounded-xl border border-dashed border-border bg-cream-card px-4 py-6 text-center text-sm text-navy/60">
                 Sin leads live pendientes. Los del stand ASOCOPI aparecen aquí
                 al capturar el QR.
+                <span className="mt-2 block text-navy/45">
+                  Sube brochures en{" "}
+                  <a href="/biblioteca" className="underline text-navy/70">
+                    Biblioteca → Materiales
+                  </a>
+                  .
+                </span>
               </p>
             )}
             {livePendientes.map((card) => renderCard(card))}
