@@ -35,6 +35,14 @@ async function requireOpsSession() {
   return { session };
 }
 
+/** Shareable app URL (Blob store is private — proxy serves the PDF). */
+function publicBrochureUrl(req: Request, slug: string): string {
+  const envBase = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+  if (envBase) return `${envBase}/api/materiales/brochure/${slug}`;
+  const origin = new URL(req.url).origin;
+  return `${origin}/api/materiales/brochure/${slug}`;
+}
+
 export async function GET() {
   const auth = await requireOpsSession();
   if ("error" in auth && auth.error) return auth.error;
@@ -123,16 +131,16 @@ export async function POST(req: Request) {
   const pathname = `materiales/brochure-${slug}.pdf`;
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  let url: string;
+  // Store is private — cannot put access:'public'. File is served via
+  // /api/materiales/brochure/[slug] (marketing asset, shareable link).
   try {
-    const result = await put(pathname, bytes, {
-      access: "public",
+    await put(pathname, bytes, {
+      access: "private",
       contentType: "application/pdf",
       addRandomSuffix: false,
       allowOverwrite: true,
       cacheControlMaxAge: 60,
     });
-    url = result.url;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[materiales] blob put failed:", msg);
@@ -142,6 +150,7 @@ export async function POST(req: Request) {
     );
   }
 
+  const url = publicBrochureUrl(req, slug);
   const meta: BrochureMeta = {
     url,
     pathname,
@@ -184,7 +193,6 @@ export async function DELETE(req: Request) {
     try {
       await del(deleted.pathname || deleted.url);
     } catch (err) {
-      // Metadata already cleared; blob delete is best-effort
       console.warn(
         "[materiales] blob del failed:",
         err instanceof Error ? err.message : err
