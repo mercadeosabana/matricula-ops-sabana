@@ -48,6 +48,47 @@ function normalizeTelefono(raw: unknown): string | null {
   return t.slice(0, 40);
 }
 
+function resolveOrigen(body: Record<string, unknown>): Origen {
+  const canalRaw = String(body.canal || body.origen || "")
+    .trim()
+    .toLowerCase();
+  const utmSource = String(body.utm_source || "")
+    .trim()
+    .toLowerCase();
+  const utmMedium = String(body.utm_medium || "")
+    .trim()
+    .toLowerCase();
+
+  // Stand ASOCOPI / evento (QR)
+  if (
+    canalRaw === "stand" ||
+    canalRaw === "stand_evento" ||
+    canalRaw === "asocopi" ||
+    utmSource === "asocopi" ||
+    utmMedium === "stand" ||
+    utmMedium === "evento"
+  ) {
+    return "stand_evento";
+  }
+
+  if (canalRaw === "linkedin" || canalRaw === "pauta_linkedin") {
+    return "pauta_linkedin";
+  }
+  if (
+    isOrigen(canalRaw) &&
+    (canalRaw === "pauta_meta" ||
+      canalRaw === "pauta_linkedin" ||
+      canalRaw === "web" ||
+      canalRaw === "stand_evento")
+  ) {
+    return canalRaw;
+  }
+  if (canalRaw === "meta" || canalRaw === "facebook" || canalRaw === "instagram") {
+    return "pauta_meta";
+  }
+  return "pauta_meta";
+}
+
 export async function POST(req: Request) {
   const ip = clientIp(req);
   if (rateLimited(ip)) {
@@ -100,20 +141,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let origen: Origen = "pauta_meta";
-  const canalRaw = String(body.canal || body.origen || "")
-    .trim()
-    .toLowerCase();
-  if (canalRaw === "linkedin" || canalRaw === "pauta_linkedin") {
-    origen = "pauta_linkedin";
-  } else if (
-    isOrigen(canalRaw) &&
-    (canalRaw === "pauta_meta" ||
-      canalRaw === "pauta_linkedin" ||
-      canalRaw === "web")
-  ) {
-    origen = canalRaw;
-  }
+  const origen = resolveOrigen(body as Record<string, unknown>);
 
   const utmCampaign =
     typeof body.utm_campaign === "string"
@@ -131,10 +159,30 @@ export async function POST(req: Request) {
   const cargoLabel =
     rol === "docente" ? "Docente" : rol === "directivo" ? "Directivo" : "Otro";
 
-  const tags = ["pauta", `rol:${rol}`, `ciudad:${ciudad}`, origen];
+  const isStand = origen === "stand_evento";
+  const tags = [
+    isStand ? "stand" : "pauta",
+    `rol:${rol}`,
+    `ciudad:${ciudad}`,
+    origen,
+  ];
   if (utmCampaign) tags.push(`utm_campaign:${utmCampaign}`);
   if (utmSource) tags.push(`utm_source:${utmSource}`);
   if (utmMedium) tags.push(`utm_medium:${utmMedium}`);
+
+  const campaignLower = utmCampaign.toLowerCase();
+  const colegioId = isStand ? "c-stand-asocopi" : "c-pauta";
+  const colegioNombre =
+    isStand && campaignLower.includes("bucaramanga")
+      ? "Stand ASOCOPI Bucaramanga"
+      : isStand
+        ? "Stand / evento"
+        : undefined;
+  const colegioZona = isStand
+    ? campaignLower.includes("bucaramanga")
+      ? "Bucaramanga"
+      : ciudad || "Colombia"
+    : undefined;
 
   const lead = await createLead({
     nombre,
@@ -142,25 +190,28 @@ export async function POST(req: Request) {
     telefonoWa,
     cargo: cargoLabel,
     programaInteres,
-    colegioId: "c-pauta",
+    colegioId,
+    colegioNombre,
+    colegioZona,
     etapaFunnel: "primer_acercamiento",
     owner: "Laura Natalia",
     nextTouch: "Primer contacto · Natalia",
     origen,
-    canalOrigen: "web",
+    canalOrigen: isStand ? "stand" : "web",
     audiencia: "estudiante",
     nextStep: "enviar_brochure",
     nextStepFecha: bogotaDate(),
     tags,
     opened: false,
     visitado: false,
+    enqueuePlaybook: true,
   });
 
   const { time, iso } = bogotaNow();
   await pushActividad({
     time,
-    actor: "Landing pauta",
-    text: `Nuevo lead ${labelOrigen(origen)}: ${nombre} · ${programaInteres} · ${ciudad} → cola Natalia (primer_acercamiento)`,
+    actor: isStand ? "Stand ASOCOPI" : "Landing pauta",
+    text: `Nuevo lead ${labelOrigen(origen)}: ${nombre} · ${programaInteres} · ${ciudad} → cola Natalia (primer_acercamiento + D+3/D+7)`,
     kind: "agente",
     createdAt: iso,
   });

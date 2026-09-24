@@ -8,13 +8,25 @@ Los agentes proponen craft (email / WhatsApp / guion / visita). Mercadeo aprueba
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript + Tailwind CSS v4
-- Persistencia JSON store (`data/store.json` local; `/tmp` en Vercel)
+- Persistencia JSON store (`data/store.json` local; en Vercel **Vercel Blob** vía `BLOB_READ_WRITE_TOKEN`, pathname `matricula-ops/store.json`. Sin token cae a `/tmp` efímero — configurar Blob en el proyecto **mercadeosabana/matricula-ops-sabana**)
 - Auth demo por persona: Laura Natalia (Mercadeo) / Laura Lucía (Dirección)
 - 5 agentes (Captación, Admisiones, Inteligencia, Orquestadora, Región) + chat en `/agentes`
 - Canales demo: Outlook, Agenda Outlook, WA, LinkedIn borradores, Llamada IA piloto, Visita, Región/Convenios
 - Modo DEMO (`?demo=1`) para simular envíos sin Azure/Meta
 - Conexiones reales: Outlook OAuth (Azure) + WhatsApp Cloud API; ver `docs/SETUP-OAUTH.md`
 - Borrador correo Ivan→Laura Lucía: `docs/CORREO-INSTRUCCIONES.md`
+
+## Persistencia en producción (Vercel)
+
+En local el store vive en `data/store.json`. En Vercel **no uses `/tmp`**: es efímero por instancia y los leads del stand desaparecen.
+
+1. En el dashboard de Vercel del proyecto **mercadeosabana / matricula-ops-sabana** → **Storage** → crea un store **Blob** (recomendado: private).
+2. Copia el token de lectura/escritura y añádelo como env var de Production (y Preview si quieres):
+   - `BLOB_READ_WRITE_TOKEN` = el token del Blob store
+3. Opcional: `BLOB_ACCESS=public` si el store se creó como público (por defecto la app usa `private`).
+4. Redesplea (o espera el próximo push a `main`). La app escribirá en el pathname `matricula-ops/store.json`.
+
+**No** configures el proyecto de `transitofunza` — el deploy correcto es el de mercadeosabana (auto-deploy desde GitHub `main`).
 
 ## Requisitos
 
@@ -65,6 +77,8 @@ npm start
 - `POST /api/agentes/chat` `{ agentId, message, history? }`
 - `GET /api/agenda`
 - `POST /api/demo/simular-llamada` / `confirmar-visita`
+- `GET /api/aprobaciones` / `PATCH /api/aprobaciones` — cola Mi día (aprobar/editar sin envío real)
+- `POST /api/leads/public` — landing `/interesado` (stand ASOCOPI / pauta)
 
 ## Datos seed
 

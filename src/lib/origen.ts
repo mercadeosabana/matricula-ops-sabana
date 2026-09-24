@@ -9,6 +9,7 @@ export type Origen =
   | "referido"
   | "convenio_region"
   | "web"
+  | "stand_evento"
   | "otro";
 
 export const ORIGENES: Origen[] = [
@@ -19,6 +20,7 @@ export const ORIGENES: Origen[] = [
   "referido",
   "convenio_region",
   "web",
+  "stand_evento",
   "otro",
 ];
 
@@ -30,6 +32,7 @@ export const ORIGEN_LABEL: Record<Origen, string> = {
   referido: "Referido",
   convenio_region: "Convenio / región",
   web: "Web / formulario",
+  stand_evento: "Stand / evento",
   otro: "Otro",
 };
 
@@ -41,12 +44,24 @@ export const ORIGEN_BADGE_CLASS: Record<Origen, string> = {
   referido: "border-ok/30 bg-[#e8f5ee] text-ok",
   convenio_region: "border-gold/45 bg-[#f8f1de] text-warn",
   web: "border-border bg-cream text-navy/70",
+  stand_evento: "border-gold/50 bg-[#fff6e0] text-[#8a6a1a]",
   otro: "border-border bg-[#f3f3f3] text-navy/55",
 };
 
-/** Base existente vs demanda nueva (LinkedIn + pauta) */
-export const ORIGEN_BASE: Origen[] = ["base_facultad", "referido", "convenio_region", "web", "otro"];
-export const ORIGEN_DEMANDA_NUEVA: Origen[] = ["linkedin", "pauta_meta", "pauta_linkedin"];
+/** Base existente vs demanda nueva (LinkedIn + pauta + stand) */
+export const ORIGEN_BASE: Origen[] = [
+  "base_facultad",
+  "referido",
+  "convenio_region",
+  "web",
+  "otro",
+];
+export const ORIGEN_DEMANDA_NUEVA: Origen[] = [
+  "linkedin",
+  "pauta_meta",
+  "pauta_linkedin",
+  "stand_evento",
+];
 
 /** Gasto EJEMPLO (COP) por canal de pauta — sin Ads API */
 export const SPEND_EJEMPLO: Record<"pauta_meta" | "pauta_linkedin", number> = {
@@ -67,6 +82,10 @@ const LEGACY_CANAL_TO_ORIGEN: Record<string, Origen> = {
   pauta_linkedin: "pauta_linkedin",
   base_facultad: "base_facultad",
   convenio_region: "convenio_region",
+  stand: "stand_evento",
+  stand_evento: "stand_evento",
+  asocopi: "stand_evento",
+  evento: "stand_evento",
   otro: "otro",
 };
 
@@ -186,7 +205,12 @@ export function buildAttribution(leads: Lead[]): AttributionSnapshot {
       count: list.length,
       funnel: funnelFromLeads(list),
     };
-  }).filter((r) => r.count > 0 || ORIGEN_DEMANDA_NUEVA.includes(r.origen) || r.origen === "base_facultad");
+  }).filter(
+    (r) =>
+      r.count > 0 ||
+      ORIGEN_DEMANDA_NUEVA.includes(r.origen) ||
+      r.origen === "base_facultad"
+  );
 
   const total = leads.length || 1;
   const baseLeads = leads.filter((l) =>

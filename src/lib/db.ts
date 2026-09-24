@@ -28,7 +28,17 @@ import {
   normalizeEtapa,
   normalizeNextStep,
 } from "./playbook";
+import type { AprobacionCard } from "./aprobacion";
+import { buildInboundPlaybookCards } from "./aprobacion";
+import {
+  BlobPreconditionFailedError,
+  deleteStoreRaw,
+  readStoreRaw,
+  resolveBackend,
+  writeStoreRaw,
+} from "./store-backend";
 
+/** Legacy local path (dev) — used only for leftover sqlite cleanup */
 const DATA_DIR = process.env.VERCEL
   ? path.join("/tmp", "matricula-ops-data")
   : path.join(process.cwd(), "data");
@@ -44,6 +54,8 @@ type Store = {
   metricas: MetricaDiaria[];
   agendaEvents: AgendaEvent[];
   metasCohorte: MetasCohorte;
+  /** Cards live para /mi-dia (aprobar sin envío real) */
+  aprobaciones: AprobacionCard[];
 };
 
 export const PROGRAMAS_META_CANONICOS = [
@@ -157,6 +169,10 @@ export function totalesMetas(metas: MetasCohorte) {
 }
 
 let cache: Store | null = null;
+/** Blob ETag for optimistic concurrency (null on fs backends) */
+let cacheEtag: string | null = null;
+/** Serialize mutations per isolate to reduce lost updates */
+let writeChain: Promise<void> = Promise.resolve();
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -341,140 +357,194 @@ function seedStore(): Store {
     ],
     agendaEvents: [],
     metasCohorte: defaultMetasCohorte(),
+    aprobaciones: [],
   };
 }
 
-function persist(store: Store) {
-  ensureDir();
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+function hydrateStore(parsed: Store): Store {
+  if (Array.isArray(parsed.tareas)) {
+    parsed.tareas = parsed.tareas.map((t) => ({
+      ...t,
+      audiencia: audienciaDeTarea(t),
+    }));
+  }
+  if (Array.isArray(parsed.users)) {
+    const byId = new Map(USERS.map((u) => [u.id, u]));
+    parsed.users = parsed.users.map((u) => {
+      const seed = byId.get(u.id);
+      const base = {
+        ...u,
+        displayName: u.displayName || u.nombre,
+        email: (u.email || "").toLowerCase(),
+        activo: u.activo !== false,
+        passwordHash: u.passwordHash || hashDemoPassword(),
+      };
+      if (!seed) return base as User;
+      return {
+        ...base,
+        nombre: u.nombre || seed.nombre,
+        displayName: u.displayName || u.nombre || seed.nombre,
+        email: (u.email || seed.email).toLowerCase(),
+        rol: seed.rol,
+        passwordHash: u.passwordHash || hashDemoPassword(),
+      } as User;
+    });
+    for (const seed of USERS) {
+      if (!parsed.users.some((u) => u.id === seed.id)) {
+        const row = seed as typeof seed & { displayName?: string };
+        parsed.users.push({
+          id: seed.id,
+          nombre: seed.nombre,
+          displayName: row.displayName || seed.nombre,
+          email: seed.email.toLowerCase(),
+          rol: seed.rol,
+          activo: Boolean(seed.activo),
+          passwordHash: hashDemoPassword(),
+          createdAt: seed.createdAt,
+        });
+      }
+    }
+  }
+  if (
+    !Array.isArray(parsed.leads) ||
+    parsed.leads.length < LEADS.length ||
+    parsed.leads.some((l) => l.owner === undefined) ||
+    parsed.leads.some(
+      (l) => !(l as Lead & { origen?: string }).origen
+    ) ||
+    parsed.leads.some((l) => !(l as Lead).nextStep) ||
+    parsed.leads.some((l) => !(l as Lead).audiencia)
+  ) {
+    parsed.colegios = COLEGIOS.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      ciudadZona: c.ciudadZona,
+      programasFoco: parseJsonArray(c.programasFoco),
+      contactoPreferido: c.contactoPreferido as Colegio["contactoPreferido"],
+      notas: c.notas,
+      ultimoContactoAt: c.ultimoContactoAt,
+    }));
+    parsed.leads = LEADS.map((l) => mapLeadFromSeed(l));
+  } else {
+    parsed.leads = parsed.leads.map((l) => normalizeLead(l));
+  }
+  if (!Array.isArray(parsed.agendaEvents)) {
+    parsed.agendaEvents = [];
+  }
+  if (!Array.isArray(parsed.aprobaciones)) {
+    parsed.aprobaciones = [];
+  }
+  if (
+    !parsed.metasCohorte ||
+    !Array.isArray(parsed.metasCohorte.programas)
+  ) {
+    parsed.metasCohorte = defaultMetasCohorte();
+  } else {
+    const d = defaultMetasCohorte();
+    parsed.metasCohorte = {
+      cohorte: parsed.metasCohorte.cohorte || d.cohorte,
+      programas: ensureCuatroProgramas(parsed.metasCohorte.programas),
+      fechaCierreCohorte:
+        parsed.metasCohorte.fechaCierreCohorte || d.fechaCierreCohorte,
+      updatedAt: parsed.metasCohorte.updatedAt ?? null,
+      updatedByName: parsed.metasCohorte.updatedByName ?? null,
+      updatedByUserId: parsed.metasCohorte.updatedByUserId ?? null,
+    };
+  }
+  return parsed;
 }
 
-function loadStore(): Store {
+async function persist(store: Store, etag: string | null): Promise<string | null> {
+  const backend = resolveBackend();
+  if (backend === "fs-tmp") {
+    console.warn(
+      "[db] Vercel sin BLOB_READ_WRITE_TOKEN — usando /tmp (efímero). Configura Blob en el proyecto mercadeosabana."
+    );
+  }
+  const json = JSON.stringify(store, null, 2);
+  const result = await writeStoreRaw(json, etag);
+  return result.etag;
+}
+
+async function loadStore(): Promise<Store> {
   if (cache) return cache;
-  ensureDir();
-  if (fs.existsSync(STORE_PATH)) {
+
+  const loaded = await readStoreRaw();
+  if (loaded.json) {
     try {
-      const raw = fs.readFileSync(STORE_PATH, "utf8");
-      const parsed = JSON.parse(raw) as Store;
+      const parsed = JSON.parse(loaded.json) as Store;
       if (
         parsed &&
         Array.isArray(parsed.tareas) &&
         Array.isArray(parsed.actividad) &&
         Array.isArray(parsed.metricas)
       ) {
-        // Keep persona names in sync with seed
-        // audiencia backfill for older store.json
-        if (Array.isArray(parsed.tareas)) {
-          parsed.tareas = parsed.tareas.map((t) => ({
-            ...t,
-            audiencia: audienciaDeTarea(t),
-          }));
-        }
-        if (Array.isArray(parsed.users)) {
-          const byId = new Map(USERS.map((u) => [u.id, u]));
-          parsed.users = parsed.users.map((u) => {
-            const seed = byId.get(u.id);
-            const base = {
-              ...u,
-              displayName: u.displayName || u.nombre,
-              email: (u.email || "").toLowerCase(),
-              activo: u.activo !== false,
-              passwordHash: u.passwordHash || hashDemoPassword(),
-            };
-            if (!seed) return base as User;
-            return {
-              ...base,
-              // keep displayName if customized; sync email/rol from seed personas
-              nombre: u.nombre || seed.nombre,
-              displayName: u.displayName || u.nombre || seed.nombre,
-              email: (u.email || seed.email).toLowerCase(),
-              rol: seed.rol,
-              passwordHash: u.passwordHash || hashDemoPassword(),
-            } as User;
-          });
-          // Ensure seed personas exist
-          for (const seed of USERS) {
-            if (!parsed.users.some((u) => u.id === seed.id)) {
-              const row = seed as typeof seed & { displayName?: string };
-              parsed.users.push({
-                id: seed.id,
-                nombre: seed.nombre,
-                displayName: row.displayName || seed.nombre,
-                email: seed.email.toLowerCase(),
-                rol: seed.rol,
-                activo: Boolean(seed.activo),
-                passwordHash: hashDemoPassword(),
-                createdAt: seed.createdAt,
-              });
-            }
+        cache = hydrateStore(parsed);
+        cacheEtag = loaded.etag;
+        // Re-persist hydrated migrations (best-effort)
+        try {
+          cacheEtag = await persist(cache, cacheEtag);
+        } catch (err) {
+          if (!(err instanceof BlobPreconditionFailedError)) {
+            console.warn("[db] hydrate persist skipped:", err);
           }
         }
-        // Refresh colegios/leads from seed when demo CRM expanded
-        if (
-          !Array.isArray(parsed.leads) ||
-          parsed.leads.length < LEADS.length ||
-          parsed.leads.some((l) => l.owner === undefined) ||
-          parsed.leads.some(
-            (l) => !(l as Lead & { origen?: string }).origen
-          ) ||
-          parsed.leads.some((l) => !(l as Lead).nextStep) ||
-          parsed.leads.some((l) => !(l as Lead).audiencia)
-        ) {
-          parsed.colegios = COLEGIOS.map((c) => ({
-            id: c.id,
-            nombre: c.nombre,
-            ciudadZona: c.ciudadZona,
-            programasFoco: parseJsonArray(c.programasFoco),
-            contactoPreferido: c.contactoPreferido as Colegio["contactoPreferido"],
-            notas: c.notas,
-            ultimoContactoAt: c.ultimoContactoAt,
-          }));
-          parsed.leads = LEADS.map((l) => mapLeadFromSeed(l));
-        } else {
-          parsed.leads = parsed.leads.map((l) => normalizeLead(l));
-        }
-        if (!Array.isArray(parsed.agendaEvents)) {
-          parsed.agendaEvents = [];
-        }
-        if (
-          !parsed.metasCohorte ||
-          !Array.isArray(parsed.metasCohorte.programas)
-        ) {
-          parsed.metasCohorte = defaultMetasCohorte();
-        } else {
-          const d = defaultMetasCohorte();
-          parsed.metasCohorte = {
-            cohorte: parsed.metasCohorte.cohorte || d.cohorte,
-            programas: ensureCuatroProgramas(parsed.metasCohorte.programas),
-            fechaCierreCohorte:
-              parsed.metasCohorte.fechaCierreCohorte ||
-              d.fechaCierreCohorte,
-            updatedAt: parsed.metasCohorte.updatedAt ?? null,
-            updatedByName: parsed.metasCohorte.updatedByName ?? null,
-            updatedByUserId: parsed.metasCohorte.updatedByUserId ?? null,
-          };
-        }
-        cache = parsed;
-        persist(cache);
         return cache;
       }
     } catch {
       // fall through to seed
     }
   }
+
   cache = seedStore();
-  persist(cache);
+  cacheEtag = null;
+  try {
+    cacheEtag = await persist(cache, null);
+  } catch (err) {
+    console.error("[db] seed persist failed:", err);
+  }
   return cache;
 }
 
-function saveStore(store: Store) {
-  cache = store;
-  persist(store);
+async function saveStore(store: Store): Promise<void> {
+  const run = async () => {
+    cache = store;
+    const maxAttempts = 3;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        cacheEtag = await persist(store, cacheEtag);
+        return;
+      } catch (err) {
+        if (err instanceof BlobPreconditionFailedError && attempt < maxAttempts - 1) {
+          // Re-read latest, merge by replacing with our in-memory store (last-write-wins on conflict retry)
+          const loaded = await readStoreRaw();
+          cacheEtag = loaded.etag;
+          continue;
+        }
+        throw err;
+      }
+    }
+  };
+  // Chain writes so concurrent handlers in the same isolate don't interleave blindly
+  const next = writeChain.then(run, run);
+  writeChain = next.then(
+    () => undefined,
+    () => undefined
+  );
+  await next;
 }
 
 export async function resetDb() {
   cache = null;
-  if (fs.existsSync(STORE_PATH)) fs.unlinkSync(STORE_PATH);
+  cacheEtag = null;
+  await deleteStoreRaw();
+  if (fs.existsSync(STORE_PATH)) {
+    try {
+      fs.unlinkSync(STORE_PATH);
+    } catch {
+      // ignore
+    }
+  }
   // also clean legacy sqlite if present
   const legacySqlite = path.join(DATA_DIR, "matricula.sqlite");
   if (fs.existsSync(legacySqlite)) {
@@ -484,16 +554,23 @@ export async function resetDb() {
       // ignore
     }
   }
-  loadStore();
+  // Force fresh seed onto durable backend
+  const fresh = seedStore();
+  cache = fresh;
+  try {
+    cacheEtag = await persist(fresh, null);
+  } catch (err) {
+    console.error("[db] reset persist failed:", err);
+  }
 }
 
 export async function listTareas(): Promise<TareaHoy[]> {
-  const store = loadStore();
+  const store = await loadStore();
   return [...store.tareas].sort((a, b) => a.orden - b.orden);
 }
 
 export async function getTarea(id: string): Promise<TareaHoy | null> {
-  const store = loadStore();
+  const store = await loadStore();
   return store.tareas.find((t) => t.id === id) ?? null;
 }
 
@@ -507,7 +584,7 @@ export async function updateTarea(
     enviadaAt: string | null;
   }>
 ): Promise<TareaHoy | null> {
-  const store = loadStore();
+  const store = await loadStore();
   const idx = store.tareas.findIndex((t) => t.id === id);
   if (idx < 0) return null;
   const current = store.tareas[idx];
@@ -524,14 +601,14 @@ export async function updateTarea(
     ...(patch.enviadaAt !== undefined ? { enviadaAt: patch.enviadaAt } : {}),
   };
   store.tareas[idx] = next;
-  saveStore(store);
+  await saveStore(store);
   return next;
 }
 
 export async function listActividad(
   kind?: "agente" | "human" | "all"
 ): Promise<ActividadItem[]> {
-  const store = loadStore();
+  const store = await loadStore();
   let items = [...store.actividad];
   if (kind && kind !== "all") {
     items = items.filter((a) => a.kind === kind);
@@ -542,7 +619,7 @@ export async function listActividad(
 export async function pushActividad(
   item: Omit<ActividadItem, "id"> & { id?: string }
 ) {
-  const store = loadStore();
+  const store = await loadStore();
   const id =
     item.id || `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   store.actividad.unshift({
@@ -553,7 +630,7 @@ export async function pushActividad(
     kind: item.kind,
     createdAt: item.createdAt,
   });
-  saveStore(store);
+  await saveStore(store);
   return id;
 }
 
@@ -567,7 +644,7 @@ export async function createEnvio(envio: {
   enviadoPorUserId: string;
   createdAt: string;
 }) {
-  const store = loadStore();
+  const store = await loadStore();
   store.envios.push({
     id: envio.id,
     tareaHoyId: envio.tareaHoyId,
@@ -578,11 +655,11 @@ export async function createEnvio(envio: {
     enviadoPorUserId: envio.enviadoPorUserId,
     createdAt: envio.createdAt,
   });
-  saveStore(store);
+  await saveStore(store);
 }
 
 export async function getMetricas() {
-  const store = loadStore();
+  const store = await loadStore();
   if (!store.metricas.length) return null;
   const sorted = [...store.metricas].sort((a, b) =>
     a.fecha < b.fecha ? 1 : -1
@@ -591,30 +668,30 @@ export async function getMetricas() {
 }
 
 export async function updateLeadEtapa(colegioHint: string, etapa: string) {
-  const store = loadStore();
+  const store = await loadStore();
   const hint = colegioHint.toLowerCase().slice(0, 8);
   const match = store.leads.find((l) =>
     l.nombre.toLowerCase().includes(hint)
   );
   if (match) {
     match.etapaFunnel = etapa;
-    saveStore(store);
+    await saveStore(store);
   }
 }
 
 
 export async function listColegios(): Promise<Colegio[]> {
-  const store = loadStore();
+  const store = await loadStore();
   return [...store.colegios].sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
 export async function listLeads(): Promise<Lead[]> {
-  const store = loadStore();
+  const store = await loadStore();
   return store.leads.map((l) => normalizeLead(l));
 }
 
 export async function getLead(id: string): Promise<Lead | null> {
-  const store = loadStore();
+  const store = await loadStore();
   const lead = store.leads.find((l) => l.id === id);
   return lead ? normalizeLead(lead) : null;
 }
@@ -623,21 +700,26 @@ export async function updateLead(
   id: string,
   patch: Partial<Lead>
 ): Promise<Lead | null> {
-  const store = loadStore();
+  const store = await loadStore();
   const idx = store.leads.findIndex((l) => l.id === id);
   if (idx < 0) return null;
   const next = normalizeLead({ ...store.leads[idx], ...patch, id });
   store.leads[idx] = next;
-  saveStore(store);
+  await saveStore(store);
   return next;
 }
 
 export async function createLead(
   input: Partial<Lead> & {
     nombre: string;
+    /** Nombre visible del colegio/stand si se crea el registro */
+    colegioNombre?: string;
+    colegioZona?: string;
+    /** Si true, encola primer contacto + D+3 + D+7 en /mi-dia */
+    enqueuePlaybook?: boolean;
   }
 ): Promise<Lead> {
-  const store = loadStore();
+  const store = await loadStore();
   const id =
     input.id ||
     `l-pauta-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -663,20 +745,42 @@ export async function createLead(
     nextStep: input.nextStep || "enviar_brochure",
     nextStepFecha: input.nextStepFecha ?? null,
   });
-  // Ensure pauta colegio exists for CRM joins
+  // Ensure colegio exists for CRM joins
   if (!store.colegios.some((c) => c.id === lead.colegioId)) {
+    const isStand = lead.origen === "stand_evento";
     store.colegios.push({
       id: lead.colegioId || "c-pauta",
-      nombre: "Interés pauta (formulario)",
-      ciudadZona: "Colombia",
+      nombre:
+        input.colegioNombre ||
+        (isStand ? "Stand ASOCOPI Bucaramanga" : "Interés pauta (formulario)"),
+      ciudadZona: input.colegioZona || (isStand ? "Bucaramanga" : "Colombia"),
       programasFoco: [...PROGRAMAS_META_CANONICOS],
       contactoPreferido: "email",
-      notas: "Leads inbound desde landing /interesado",
+      notas: isStand
+        ? "Leads captados en stand / evento (ASOCOPI)"
+        : "Leads inbound desde landing /interesado",
       ultimoContactoAt: lead.createdAt,
     });
+  } else if (input.colegioNombre) {
+    const idx = store.colegios.findIndex((c) => c.id === lead.colegioId);
+    if (idx >= 0) {
+      store.colegios[idx] = {
+        ...store.colegios[idx],
+        nombre: input.colegioNombre,
+        ...(input.colegioZona ? { ciudadZona: input.colegioZona } : {}),
+        ultimoContactoAt: lead.createdAt,
+      };
+    }
   }
   store.leads.unshift(lead);
-  saveStore(store);
+
+  if (input.enqueuePlaybook) {
+    if (!Array.isArray(store.aprobaciones)) store.aprobaciones = [];
+    const cards = buildInboundPlaybookCards(lead);
+    store.aprobaciones.unshift(...cards);
+  }
+
+  await saveStore(store);
   return lead;
 }
 
@@ -689,7 +793,7 @@ export async function updatePostVisita(
 
 
 export async function listAgendaEvents(): Promise<AgendaEvent[]> {
-  const store = loadStore();
+  const store = await loadStore();
   return [...(store.agendaEvents || [])].sort((a, b) =>
     a.startIso < b.startIso ? -1 : 1
   );
@@ -698,7 +802,7 @@ export async function listAgendaEvents(): Promise<AgendaEvent[]> {
 export async function createAgendaEvent(
   event: Omit<AgendaEvent, "id"> & { id?: string }
 ): Promise<AgendaEvent> {
-  const store = loadStore();
+  const store = await loadStore();
   if (!store.agendaEvents) store.agendaEvents = [];
   const id =
     event.id || `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -718,7 +822,7 @@ export async function createAgendaEvent(
     createdBy: event.createdBy,
   };
   store.agendaEvents.unshift(row);
-  saveStore(store);
+  await saveStore(store);
   return row;
 }
 
@@ -726,7 +830,7 @@ export async function findLeadEmailForDest(dest: string): Promise<{
   email: string | null;
   nombre: string | null;
 }> {
-  const store = loadStore();
+  const store = await loadStore();
   const lower = (dest || "").toLowerCase();
   const emailMatch = dest.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   if (emailMatch) {
@@ -774,17 +878,17 @@ export function publicUser(u: User) {
 }
 
 export async function listUsers(): Promise<ReturnType<typeof publicUser>[]> {
-  const store = loadStore();
+  const store = await loadStore();
   return store.users.map(publicUser);
 }
 
 export async function findUserById(id: string): Promise<User | null> {
-  const store = loadStore();
+  const store = await loadStore();
   return store.users.find((u) => u.id === id) ?? null;
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {
-  const store = loadStore();
+  const store = await loadStore();
   const e = email.trim().toLowerCase();
   return store.users.find((u) => u.email.toLowerCase() === e) ?? null;
 }
@@ -795,7 +899,7 @@ export async function createUser(input: {
   rol: User["rol"];
   tempPassword: string;
 }): Promise<ReturnType<typeof publicUser> | { error: string }> {
-  const store = loadStore();
+  const store = await loadStore();
   const email = input.email.trim().toLowerCase();
   if (!input.nombre.trim() || !email || !input.tempPassword) {
     return { error: "Nombre, correo y contraseña temporal son obligatorios" };
@@ -814,7 +918,7 @@ export async function createUser(input: {
     createdAt: new Date().toISOString(),
   };
   store.users.push(user);
-  saveStore(store);
+  await saveStore(store);
   return publicUser(user);
 }
 
@@ -822,11 +926,11 @@ export async function setUserActive(
   id: string,
   activo: boolean
 ): Promise<ReturnType<typeof publicUser> | null> {
-  const store = loadStore();
+  const store = await loadStore();
   const idx = store.users.findIndex((u) => u.id === id);
   if (idx < 0) return null;
   store.users[idx] = { ...store.users[idx], activo };
-  saveStore(store);
+  await saveStore(store);
   return publicUser(store.users[idx]);
 }
 
@@ -834,14 +938,14 @@ export async function resetUserPassword(
   id: string,
   tempPassword: string
 ): Promise<ReturnType<typeof publicUser> | null> {
-  const store = loadStore();
+  const store = await loadStore();
   const idx = store.users.findIndex((u) => u.id === id);
   if (idx < 0) return null;
   store.users[idx] = {
     ...store.users[idx],
     passwordHash: hashPassword(tempPassword),
   };
-  saveStore(store);
+  await saveStore(store);
   return publicUser(store.users[idx]);
 }
 
@@ -850,7 +954,7 @@ export async function reassignPendingOwnership(opts: {
   fromUserId: string;
   toUserId: string;
 }): Promise<{ leadsMoved: number; fromName: string; toName: string }> {
-  const store = loadStore();
+  const store = await loadStore();
   const from = store.users.find((u) => u.id === opts.fromUserId);
   const to = store.users.find((u) => u.id === opts.toUserId);
   if (!from || !to) {
@@ -867,7 +971,7 @@ export async function reassignPendingOwnership(opts: {
     }
     return l;
   });
-  saveStore(store);
+  await saveStore(store);
   return {
     leadsMoved,
     fromName: from.displayName || from.nombre,
@@ -877,10 +981,10 @@ export async function reassignPendingOwnership(opts: {
 
 
 export async function getMetasCohorte(): Promise<MetasCohorte> {
-  const store = loadStore();
+  const store = await loadStore();
   if (!store.metasCohorte) {
     store.metasCohorte = defaultMetasCohorte();
-    saveStore(store);
+    await saveStore(store);
   } else {
     const fixed = {
       ...store.metasCohorte,
@@ -907,7 +1011,7 @@ export async function updateMetasCohorte(
   },
   actor: { id: string; displayName: string }
 ): Promise<MetasCohorte> {
-  const store = loadStore();
+  const store = await loadStore();
   const current = store.metasCohorte || defaultMetasCohorte();
   const next: MetasCohorte = {
     cohorte: patch.cohorte?.trim() || current.cohorte,
@@ -923,6 +1027,56 @@ export async function updateMetasCohorte(
     updatedByUserId: actor.id,
   };
   store.metasCohorte = next;
-  saveStore(store);
+  await saveStore(store);
   return next;
+}
+
+
+export async function listAprobaciones(): Promise<AprobacionCard[]> {
+  const store = await loadStore();
+  if (!Array.isArray(store.aprobaciones)) store.aprobaciones = [];
+  return store.aprobaciones.map((c) => ({ ...c }));
+}
+
+export async function getAprobacion(id: string): Promise<AprobacionCard | null> {
+  const store = await loadStore();
+  const card = (store.aprobaciones || []).find((c) => c.id === id);
+  return card ? { ...card } : null;
+}
+
+export async function updateAprobacion(
+  id: string,
+  patch: Partial<
+    Pick<AprobacionCard, "estado" | "preview" | "approvedAt" | "why" | "canal">
+  >
+): Promise<AprobacionCard | null> {
+  const store = await loadStore();
+  if (!Array.isArray(store.aprobaciones)) store.aprobaciones = [];
+  const idx = store.aprobaciones.findIndex((c) => c.id === id);
+  if (idx < 0) return null;
+  const next: AprobacionCard = {
+    ...store.aprobaciones[idx],
+    ...patch,
+  };
+  store.aprobaciones[idx] = next;
+  await saveStore(store);
+  return { ...next };
+}
+
+/** Encola playbook (por si se creó el lead sin enqueuePlaybook). */
+export async function enqueueInboundPlaybook(
+  leadId: string
+): Promise<AprobacionCard[]> {
+  const store = await loadStore();
+  const lead = store.leads.find((l) => l.id === leadId);
+  if (!lead) return [];
+  if (!Array.isArray(store.aprobaciones)) store.aprobaciones = [];
+  const cards = buildInboundPlaybookCards(normalizeLead(lead));
+  store.aprobaciones.unshift(...cards);
+  await saveStore(store);
+  return cards.map((c) => ({ ...c }));
+}
+
+export function getStoreBackendKind() {
+  return resolveBackend();
 }

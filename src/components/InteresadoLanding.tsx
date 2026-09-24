@@ -43,10 +43,16 @@ export function InteresadoLanding() {
   const utm_source = search.get("utm_source") || search.get("source") || "";
   const utm_medium = search.get("utm_medium") || "";
 
+  const isStand =
+    canal === "stand" ||
+    utm_source.toLowerCase() === "asocopi" ||
+    utm_medium.toLowerCase() === "stand";
+
   const origenLabel = useMemo(() => {
+    if (isStand) return "Stand ASOCOPI";
     if (canal === "linkedin") return "Pauta LinkedIn";
     return "Pauta Meta";
-  }, [canal]);
+  }, [canal, isStand]);
 
   const [form, setForm] = useState<FormState>(INITIAL);
   const [busy, setBusy] = useState(false);
@@ -67,7 +73,11 @@ export function InteresadoLanding() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          canal: canal === "linkedin" ? "linkedin" : "meta",
+          canal: isStand
+            ? "stand"
+            : canal === "linkedin"
+              ? "linkedin"
+              : "meta",
           utm_campaign,
           utm_source,
           utm_medium,
@@ -121,8 +131,14 @@ export function InteresadoLanding() {
             </p>
             <p className="mt-4 text-sm text-navy/60">
               Si quieres escribirnos antes:{" "}
-              <span className="font-medium text-navy">
-                facultad.educacion@unisabana.edu.co
+              <a
+                className="font-medium text-navy underline decoration-gold/60 underline-offset-2 hover:text-navy-mid"
+                href="mailto:laura.bobadilla@unisabana.edu.co"
+              >
+                laura.bobadilla@unisabana.edu.co
+              </a>
+              <span className="mt-1 block text-xs text-navy/45">
+                Laura Natalia · Mercadeo · Facultad de Educación
               </span>
             </p>
             <button
@@ -287,6 +303,18 @@ export function InteresadoLanding() {
             </form>
           </section>
         )}
+
+        <footer className="mt-8 border-t border-border/60 pt-4 text-center text-[11px] leading-relaxed text-navy/50">
+          ¿Dudas? Escribe a{" "}
+          <a
+            className="font-medium text-navy underline decoration-gold/50 underline-offset-2"
+            href="mailto:laura.bobadilla@unisabana.edu.co"
+          >
+            laura.bobadilla@unisabana.edu.co
+          </a>
+          <br />
+          Laura Natalia · Mercadeo · Unisabana Educación
+        </footer>
       </main>
     </div>
   );
