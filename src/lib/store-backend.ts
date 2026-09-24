@@ -3,15 +3,14 @@
  * - Local (non-VERCEL): data/store.json via fs
  * - Vercel + BLOB_READ_WRITE_TOKEN: @vercel/blob pathname matricula-ops/store.json
  * - Vercel without token: /tmp fallback (ephemeral — set the token in production)
+ *
+ * Blob writes use allowOverwrite last-write-wins (no ifMatch). This app is a
+ * single JSON document store; optimistic concurrency without merge caused
+ * precondition 412/500s under cold-start concurrent hydrates.
  */
 import fs from "fs";
 import path from "path";
-import {
-  put,
-  get,
-  head,
-  BlobPreconditionFailedError,
-} from "@vercel/blob";
+import { put, get, head } from "@vercel/blob";
 
 export const BLOB_STORE_PATHNAME = "matricula-ops/store.json";
 
@@ -43,7 +42,7 @@ function ensureFsDir(filePath: string) {
 
 export type LoadedRaw = {
   json: string | null;
-  /** ETag for Blob optimistic concurrency; null for fs */
+  /** ETag from Blob (informational); null for fs. Not used for writes. */
   etag: string | null;
   backend: StoreBackendKind;
 };
@@ -59,7 +58,6 @@ export async function readStoreRaw(): Promise<LoadedRaw> {
         useCache: false,
       });
       if (!result || result.statusCode !== 200 || !result.stream) {
-        // Try head in case get returned null (missing)
         return { json: null, etag: null, backend };
       }
       const text = await new Response(result.stream).text();
@@ -93,29 +91,24 @@ export async function readStoreRaw(): Promise<LoadedRaw> {
 }
 
 /**
- * Persist JSON. For Blob, uses ifMatch when etag is provided (optimistic concurrency).
- * Retries once on precondition failure by re-reading is the caller's job — this throws.
+ * Persist JSON. Blob: last-write-wins via allowOverwrite (no ifMatch).
+ * etag is accepted for API compatibility but ignored on blob writes.
  */
 export async function writeStoreRaw(
   json: string,
-  etag: string | null
+  _etag: string | null
 ): Promise<{ etag: string | null; backend: StoreBackendKind }> {
   const backend = resolveBackend();
 
   if (backend === "blob") {
-    const opts: Parameters<typeof put>[2] = {
-      access: blobAccess(),
-      contentType: "application/json",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      cacheControlMaxAge: 60,
-    };
-    if (etag) {
-      opts.ifMatch = etag;
-    }
     try {
-      const result = await put(BLOB_STORE_PATHNAME, json, opts);
-      // put may not return etag on all versions — refresh via head
+      const result = await put(BLOB_STORE_PATHNAME, json, {
+        access: blobAccess(),
+        contentType: "application/json",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 60,
+      });
       let nextEtag: string | null = (result as { etag?: string }).etag ?? null;
       if (!nextEtag) {
         try {
@@ -127,9 +120,6 @@ export async function writeStoreRaw(
       }
       return { etag: nextEtag, backend };
     } catch (err) {
-      if (err instanceof BlobPreconditionFailedError) {
-        throw err;
-      }
       console.error(
         "[store-backend] blob write failed:",
         err instanceof Error ? err.message : err
@@ -148,11 +138,8 @@ export async function writeStoreRaw(
 export async function deleteStoreRaw(): Promise<void> {
   const backend = resolveBackend();
   if (backend === "blob") {
-    // Leave deletion to put of fresh seed; optional del would need import
     return;
   }
   const filePath = storePathForFs(backend);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
-
-export { BlobPreconditionFailedError };

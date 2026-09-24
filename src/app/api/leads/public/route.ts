@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import {
   bogotaNow,
   createLead,
-  pushActividad,
   PROGRAMAS_META_CANONICOS,
 } from "@/lib/db";
 import { isOrigen, labelOrigen, type Origen } from "@/lib/origen";
@@ -90,135 +89,145 @@ function resolveOrigen(body: Record<string, unknown>): Origen {
 }
 
 export async function POST(req: Request) {
-  const ip = clientIp(req);
-  if (rateLimited(ip)) {
+  try {
+    const ip = clientIp(req);
+    if (rateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Demasiados envíos. Intenta en unos minutos." },
+        { status: 429 }
+      );
+    }
+
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+    }
+
+    // Honeypot — bots fill hidden fields
+    if (typeof body.empresa_web === "string" && body.empresa_web.trim()) {
+      return NextResponse.json({ ok: true, leadId: "ok" });
+    }
+
+    const nombre = String(body.nombre || "").trim();
+    const email = String(body.email || "").trim().toLowerCase();
+    const telefonoWa = normalizeTelefono(body.telefono);
+    const programaInteres = String(body.programa || "").trim();
+    const rol = String(body.rol || "").trim().toLowerCase();
+    const ciudad = String(body.ciudad || "").trim();
+    const consentimiento = Boolean(body.consentimiento);
+
+    if (!nombre || nombre.length < 2) {
+      return NextResponse.json({ error: "Indica tu nombre" }, { status: 400 });
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "Correo no válido" }, { status: 400 });
+    }
+    if (!PROGRAMAS.has(programaInteres)) {
+      return NextResponse.json(
+        { error: "Selecciona un programa de interés" },
+        { status: 400 }
+      );
+    }
+    if (!ROLES.has(rol)) {
+      return NextResponse.json({ error: "Selecciona tu rol" }, { status: 400 });
+    }
+    if (!ciudad || ciudad.length < 2) {
+      return NextResponse.json({ error: "Indica tu ciudad" }, { status: 400 });
+    }
+    if (!consentimiento) {
+      return NextResponse.json(
+        { error: "Necesitamos tu consentimiento para contactarte" },
+        { status: 400 }
+      );
+    }
+
+    const origen = resolveOrigen(body as Record<string, unknown>);
+
+    const utmCampaign =
+      typeof body.utm_campaign === "string"
+        ? body.utm_campaign.trim().slice(0, 80)
+        : "";
+    const utmSource =
+      typeof body.utm_source === "string"
+        ? body.utm_source.trim().slice(0, 80)
+        : "";
+    const utmMedium =
+      typeof body.utm_medium === "string"
+        ? body.utm_medium.trim().slice(0, 80)
+        : "";
+
+    const cargoLabel =
+      rol === "docente" ? "Docente" : rol === "directivo" ? "Directivo" : "Otro";
+
+    const isStand = origen === "stand_evento";
+    const tags = [
+      isStand ? "stand" : "pauta",
+      `rol:${rol}`,
+      `ciudad:${ciudad}`,
+      origen,
+    ];
+    if (utmCampaign) tags.push(`utm_campaign:${utmCampaign}`);
+    if (utmSource) tags.push(`utm_source:${utmSource}`);
+    if (utmMedium) tags.push(`utm_medium:${utmMedium}`);
+
+    const campaignLower = utmCampaign.toLowerCase();
+    const colegioId = isStand ? "c-stand-asocopi" : "c-pauta";
+    const colegioNombre =
+      isStand && campaignLower.includes("bucaramanga")
+        ? "Stand ASOCOPI Bucaramanga"
+        : isStand
+          ? "Stand / evento"
+          : undefined;
+    const colegioZona = isStand
+      ? campaignLower.includes("bucaramanga")
+        ? "Bucaramanga"
+        : ciudad || "Colombia"
+      : undefined;
+
+    const { time, iso } = bogotaNow();
+
+    // Lead + actividad in one Blob write so both land or neither
+    const lead = await createLead({
+      nombre,
+      email,
+      telefonoWa,
+      cargo: cargoLabel,
+      programaInteres,
+      colegioId,
+      colegioNombre,
+      colegioZona,
+      etapaFunnel: "primer_acercamiento",
+      owner: "Laura Natalia",
+      nextTouch: "Primer contacto · Natalia",
+      origen,
+      canalOrigen: isStand ? "stand" : "web",
+      audiencia: "estudiante",
+      nextStep: "enviar_brochure",
+      nextStepFecha: bogotaDate(),
+      tags,
+      opened: false,
+      visitado: false,
+      enqueuePlaybook: true,
+      actividad: {
+        time,
+        actor: isStand ? "Stand ASOCOPI" : "Landing pauta",
+        text: `Nuevo lead ${labelOrigen(origen)}: ${nombre} · ${programaInteres} · ${ciudad} → cola Natalia (primer_acercamiento + D+3/D+7)`,
+        kind: "agente",
+        createdAt: iso,
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      leadId: lead.id,
+      origen: lead.origen,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[api/leads/public] POST failed:", message, err);
     return NextResponse.json(
-      { error: "Demasiados envíos. Intenta en unos minutos." },
-      { status: 429 }
+      { error: "No se pudo guardar el lead. Intenta de nuevo." },
+      { status: 500 }
     );
   }
-
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
-  }
-
-  // Honeypot — bots fill hidden fields
-  if (typeof body.empresa_web === "string" && body.empresa_web.trim()) {
-    return NextResponse.json({ ok: true, leadId: "ok" });
-  }
-
-  const nombre = String(body.nombre || "").trim();
-  const email = String(body.email || "").trim().toLowerCase();
-  const telefonoWa = normalizeTelefono(body.telefono);
-  const programaInteres = String(body.programa || "").trim();
-  const rol = String(body.rol || "").trim().toLowerCase();
-  const ciudad = String(body.ciudad || "").trim();
-  const consentimiento = Boolean(body.consentimiento);
-
-  if (!nombre || nombre.length < 2) {
-    return NextResponse.json({ error: "Indica tu nombre" }, { status: 400 });
-  }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: "Correo no válido" }, { status: 400 });
-  }
-  if (!PROGRAMAS.has(programaInteres)) {
-    return NextResponse.json(
-      { error: "Selecciona un programa de interés" },
-      { status: 400 }
-    );
-  }
-  if (!ROLES.has(rol)) {
-    return NextResponse.json({ error: "Selecciona tu rol" }, { status: 400 });
-  }
-  if (!ciudad || ciudad.length < 2) {
-    return NextResponse.json({ error: "Indica tu ciudad" }, { status: 400 });
-  }
-  if (!consentimiento) {
-    return NextResponse.json(
-      { error: "Necesitamos tu consentimiento para contactarte" },
-      { status: 400 }
-    );
-  }
-
-  const origen = resolveOrigen(body as Record<string, unknown>);
-
-  const utmCampaign =
-    typeof body.utm_campaign === "string"
-      ? body.utm_campaign.trim().slice(0, 80)
-      : "";
-  const utmSource =
-    typeof body.utm_source === "string"
-      ? body.utm_source.trim().slice(0, 80)
-      : "";
-  const utmMedium =
-    typeof body.utm_medium === "string"
-      ? body.utm_medium.trim().slice(0, 80)
-      : "";
-
-  const cargoLabel =
-    rol === "docente" ? "Docente" : rol === "directivo" ? "Directivo" : "Otro";
-
-  const isStand = origen === "stand_evento";
-  const tags = [
-    isStand ? "stand" : "pauta",
-    `rol:${rol}`,
-    `ciudad:${ciudad}`,
-    origen,
-  ];
-  if (utmCampaign) tags.push(`utm_campaign:${utmCampaign}`);
-  if (utmSource) tags.push(`utm_source:${utmSource}`);
-  if (utmMedium) tags.push(`utm_medium:${utmMedium}`);
-
-  const campaignLower = utmCampaign.toLowerCase();
-  const colegioId = isStand ? "c-stand-asocopi" : "c-pauta";
-  const colegioNombre =
-    isStand && campaignLower.includes("bucaramanga")
-      ? "Stand ASOCOPI Bucaramanga"
-      : isStand
-        ? "Stand / evento"
-        : undefined;
-  const colegioZona = isStand
-    ? campaignLower.includes("bucaramanga")
-      ? "Bucaramanga"
-      : ciudad || "Colombia"
-    : undefined;
-
-  const lead = await createLead({
-    nombre,
-    email,
-    telefonoWa,
-    cargo: cargoLabel,
-    programaInteres,
-    colegioId,
-    colegioNombre,
-    colegioZona,
-    etapaFunnel: "primer_acercamiento",
-    owner: "Laura Natalia",
-    nextTouch: "Primer contacto · Natalia",
-    origen,
-    canalOrigen: isStand ? "stand" : "web",
-    audiencia: "estudiante",
-    nextStep: "enviar_brochure",
-    nextStepFecha: bogotaDate(),
-    tags,
-    opened: false,
-    visitado: false,
-    enqueuePlaybook: true,
-  });
-
-  const { time, iso } = bogotaNow();
-  await pushActividad({
-    time,
-    actor: isStand ? "Stand ASOCOPI" : "Landing pauta",
-    text: `Nuevo lead ${labelOrigen(origen)}: ${nombre} · ${programaInteres} · ${ciudad} → cola Natalia (primer_acercamiento + D+3/D+7)`,
-    kind: "agente",
-    createdAt: iso,
-  });
-
-  return NextResponse.json({
-    ok: true,
-    leadId: lead.id,
-    origen: lead.origen,
-  });
 }

@@ -31,7 +31,6 @@ import {
 import type { AprobacionCard } from "./aprobacion";
 import { buildInboundPlaybookCards } from "./aprobacion";
 import {
-  BlobPreconditionFailedError,
   deleteStoreRaw,
   readStoreRaw,
   resolveBackend,
@@ -479,16 +478,10 @@ async function loadStore(): Promise<Store> {
         Array.isArray(parsed.actividad) &&
         Array.isArray(parsed.metricas)
       ) {
+        // Hydrate in memory only — do not re-persist on every cold read
+        // (that raced with concurrent writes under Blob ifMatch).
         cache = hydrateStore(parsed);
         cacheEtag = loaded.etag;
-        // Re-persist hydrated migrations (best-effort)
-        try {
-          cacheEtag = await persist(cache, cacheEtag);
-        } catch (err) {
-          if (!(err instanceof BlobPreconditionFailedError)) {
-            console.warn("[db] hydrate persist skipped:", err);
-          }
-        }
         return cache;
       }
     } catch {
@@ -509,23 +502,9 @@ async function loadStore(): Promise<Store> {
 async function saveStore(store: Store): Promise<void> {
   const run = async () => {
     cache = store;
-    const maxAttempts = 3;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        cacheEtag = await persist(store, cacheEtag);
-        return;
-      } catch (err) {
-        if (err instanceof BlobPreconditionFailedError && attempt < maxAttempts - 1) {
-          // Re-read latest, merge by replacing with our in-memory store (last-write-wins on conflict retry)
-          const loaded = await readStoreRaw();
-          cacheEtag = loaded.etag;
-          continue;
-        }
-        throw err;
-      }
-    }
+    // Blob writes are last-write-wins (no ifMatch); chain serializes same-isolate writers.
+    cacheEtag = await persist(store, cacheEtag);
   };
-  // Chain writes so concurrent handlers in the same isolate don't interleave blindly
   const next = writeChain.then(run, run);
   writeChain = next.then(
     () => undefined,
@@ -717,6 +696,8 @@ export async function createLead(
     colegioZona?: string;
     /** Si true, encola primer contacto + D+3 + D+7 en /mi-dia */
     enqueuePlaybook?: boolean;
+    /** Optional actividad row saved in the same persist as the lead */
+    actividad?: Omit<ActividadItem, "id"> & { id?: string };
   }
 ): Promise<Lead> {
   const store = await loadStore();
@@ -778,6 +759,20 @@ export async function createLead(
     if (!Array.isArray(store.aprobaciones)) store.aprobaciones = [];
     const cards = buildInboundPlaybookCards(lead);
     store.aprobaciones.unshift(...cards);
+  }
+
+  if (input.actividad) {
+    const actId =
+      input.actividad.id ||
+      `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    store.actividad.unshift({
+      id: actId,
+      time: input.actividad.time,
+      actor: input.actividad.actor,
+      text: input.actividad.text,
+      kind: input.actividad.kind,
+      createdAt: input.actividad.createdAt,
+    });
   }
 
   await saveStore(store);
